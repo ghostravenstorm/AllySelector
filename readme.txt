@@ -1,28 +1,31 @@
 
--- AllySelector v1.03
+-- AllySelector v1.04
 -- GhostRavenstorm
 ------------
 
--- Summary
+-- Features
 ------------
-Addon that makes life better for Espers who use tab targetting for healing.
+Smart Target Cycling:
+   - Allows for the user to quickly select the lowest health ally in range (35m).
+   - Selects the next ally in range if no one is below 100% health.
+   - Only selects the next target that is in the same PvP state as the user
+     (while in PvP, only cycle through allies who are also in PvP, and ignore
+     PvP allies if user is not in PvP).
 
-Pressing the tab key (by default) while in party will select the lowest health ally
-(based on percent, not value) in range (35m). 
-
-If all allies in range are at 100%, then this will select a random ally in 
-range (self included).
+Bookmark Healing Priority Targets:
+   - Allows for the user to register a keybind to select a specific ally.
 
 
 -- Notes
 ------------
-This addons contains no GUI that can be invoked.
+This addon contains no GUI that can be invoked.
 
-Ensure the Debug channel in chat window is on to recieve messages
+Ensure the Debug channel in chat window is on to receive messages
 about this addon.
 
-Setting the macro key to something other than tab doesn't persist
-between /reloadui (WIP).
+Keybind for target cycling will reset to its default, tab, when ui is reloaded.
+
+Bookmarks will be erased when ui is reloaded.
 
 
 -- Slash Commands
@@ -30,16 +33,23 @@ between /reloadui (WIP).
 /as-setkey -- The next key press after invoking this command will set the default
               macro key to that key.
 
+/as-setbm  -- The next key press after invoking this command will set the currently
+              selected ally to that key.
+
+/as-undo   -- Removes the last target assigned to a keybind (one time only).
+
+/as-clear  -- Erases all bookmarks.
+
 
 -- Change Log
 ------------
+1.04 -- Removed the need for GroupLib to get player references. All friendly
+        players loaded in the region are saved and used as references.
+     -- Added bookmarks to quickly save priority healing targets to a key.
+
 1.03 -- Removed Debug code.
      -- Reinstated recursive loop for selecting lowest health ally.
 
-1.02 -- Fixed infinate recursive loop.
+1.02 -- Fixed infinite recursive loop.
 
 1.01 -- Resolved a crucial bug that was trying to select players out of range.
-
-
-
-
