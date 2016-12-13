@@ -1,5 +1,5 @@
 
--- AllySelector v1.04
+-- AllySelector v1.05
 -- GhostRavenstorm
 ------------
 
@@ -11,6 +11,7 @@ Smart Target Cycling:
    - Only selects the next target that is in the same PvP state as the user
      (while in PvP, only cycle through allies who are also in PvP, and ignore
      PvP allies if user is not in PvP).
+   - Only selects units of the same faction as the player or if in same group as player.
 
 Bookmark Healing Priority Targets:
    - Allows for the user to register a keybind to select a specific ally.
@@ -43,6 +44,8 @@ Bookmarks will be erased when ui is reloaded.
 
 -- Change Log
 ------------
+1.05 -- Added check for same faction as player.
+     --
 1.04 -- Removed the need for GroupLib to get player references. All friendly
         players loaded in the region are saved and used as references.
      -- Added bookmarks to quickly save priority healing targets to a key.
