@@ -1,23 +1,31 @@
+-----------------------------------
+-- Program: AllySelector 1.6
+-- Author: GhostRavenstorm
+-- Date: 2016-12-14
 
--- AllySelector 1.05
--- GhostRavenstorm
+-- Description: Addon for Wildstar designed to algorithmically select and cycle
+-- through a list of priority allies in need of assitance based on health
+-- percentages and buffs.
+-----------------------------------
 
 -- Datatype prefixes
---   n = number
---   b = boolean
---   t = table
---   str = string
---   f = function
---   unit = unit
-
+--   n     = number
+--   b     = boolean
+--   t     = table
+--   str   = string
+--   f     = function
+--   unit  = Unit
+--   list  = ArrayList
+--   ulist = UnitArrayList
 
 require "Window"
 
------
--- Object definition
------
-
+-- AllySelector Module definition
 local AllySelector = {}
+
+-- Module definitions
+local ArrayList = Apollo.GetPackage("Lib:ArrayList").tPackage
+local UnitArrayList = Apollo.GetPackage("Lib:UnitArrayList").tPackage
 
 -- New instance of Selector
 function AllySelector:New(o)
@@ -25,23 +33,29 @@ function AllySelector:New(o)
 	setmetatable(o, self)
 	self.__index = self
 
-	o.nDefaultKey = 9
-	o.nDefaultRange = 35
+	self.nDefaultKey = 9
+	self.nDefaultRange = 35
 
-	o.nSelection = 1
-	o.nAlliesInRegion = 0
-	o.tAlliesInRegionByName = {}
-	o.tAlliesInRegionByIteration = {}
+	self.nSelection = 1
+	--o.nAlliesInRegion = 0
+	--o.tAlliesInRegionByName = {}
+	--o.tAlliesInRegionByIteration = {}
 
-	o.tTargetBookmarks = {}
-	o.nLastBookmark = nil
+	self.tTargetBookmarks = {}
+	self.nLastBookmark = nil
+
+	self.ulistAlliesInRegion = UnitArrayList:New()
+	--self.listAlliesBookmarked = ArrayList:New()
 
 	return o
 end
 
--- Constructor
+------------------------------
+-- Constructors and Event Handlers
+------------------------------
+
 function AllySelector:Init()
-    Apollo.RegisterAddon(self, false, nil, nil)
+    Apollo.RegisterAddon(self)
 end
 
 function AllySelector:OnLoad()
@@ -60,20 +74,24 @@ function AllySelector:ResetKeyDownEventHandlers()
 	--Apollo.RegisterEventHandler("SystemKeyDown", "Debug", self)
 end
 
--- function AllySelector:Debug(nKeyCode)
--- 	if nKeyCode == 70 then
--- 		for k, v in pairs(self.tAlliesInRegionByIteration) do
--- 			Print(tostring(k) .. " " .. v)
--- 		end
--- 		Print("Allies: " .. tostring(self.nAlliesInRegion))
--- 	end
---
--- 	if nKeyCode == 71 then
--- 		for k, v in pairs(self.tAlliesInRegionByName) do
--- 			Print(k)
--- 		end
--- 	end
--- end
+function AllySelector:Debug(nKeyCode)
+	if nKeyCode == 70 then
+		-- for k, v in pairs(self.tAlliesInRegionByIteration) do
+		-- 	Print(tostring(k) .. " " .. v)
+		-- end
+		-- Print("Allies: " .. tostring(self.nAlliesInRegion))
+
+		for i = 1, self.ulistAlliesInRegion:GetSize() do
+			Print(tostring(i) .. ": " .. self.ulistAlliesInRegion:GetAtIndex(i):GetName())
+		end
+
+		--self.ulistAlliesInRegion:Print()
+	end
+
+	if nKeyCode == 71 then
+		Print(tostring(getmetatable(self.ulistAlliesInRegion:GetAtIndex(1))))
+	end
+end
 
 function AllySelector:TraceKey()
 	Apollo.RegisterEventHandler("SystemKeyDown", "SetDefaultKey", self)
@@ -94,79 +112,80 @@ function AllySelector:OnUnitCreated(unit)
 
 	-- Sort units loaded into a table if a player.
 	if unit:GetType() == "Player" then
-		if self.tAlliesInRegionByName[unit:GetName()] ~= unit then
-			-- Check if name already exists.
-			self:AddKeyToIteration(1, unit:GetName())
-			self.tAlliesInRegionByName[unit:GetName()] = unit
-			self.nAlliesInRegion = self.nAlliesInRegion + 1
-		end
+		-- if self.tAlliesInRegionByName[unit:GetName()] ~= unit then
+		-- 	-- Check if name already exists.
+		-- 	self:AddKeyToIteration(1, unit:GetName())
+		-- 	self.tAlliesInRegionByName[unit:GetName()] = unit
+		-- 	self.nAlliesInRegion = self.nAlliesInRegion + 1
+		-- end
+
+		self.ulistAlliesInRegion:Add(unit)
+		self.ulistAlliesInRegion:SortByLowestHealth()
+
 	end
 
 	-- Note: There seems to be a bug with the UnitCreated event where its triggering
 	--       when the user selects a unit.
 end
 
-function AllySelector:IsSameFactionOrInGroup(unit)
-	--Print(tostring(unit:GetFaction()))
-	--Print(tostring(GameLib.GetPlayerUnit()))
-	--do return true end
-
-	if unit:GetFaction() == GameLib.GetPlayerUnit():GetFaction() then
-		return true
-	elseif unit:IsInYourGroup() then
-		return true
-	else
-		return false
-	end
-end
-
 function AllySelector:OnUnitDestroyed(unit)
 
 	-- Remove unit from table if in table.
-	if self.tAlliesInRegionByName[unit:GetName()] then
-		self.tAlliesInRegionByName[unit:GetName()] = nil
-		--self:RemoveKeyFromIteration(unit:GetName(), nil)
-		self:RemoveKeyFromIteration(unit:GetName())
-		self.nAlliesInRegion = self.nAlliesInRegion - 1
-	end
-end
-
-function AllySelector:AddKeyToIteration(nIteration, strKey)
-	-- Add the key (player name) from tAlliesInRegionByName to tAlliesInRegionByIteration
-	-- to have an ordered list that can be iterated through without a pairs loop.
-
-	if not self.tAlliesInRegionByIteration[nIteration] then
-		-- Check if this index is not occupied then add the key.
-		self.tAlliesInRegionByIteration[nIteration] = strKey
-	else
-		-- Recursively iterate to the next index until an empty one if found.
-		return self:AddKeyToIteration(nIteration + 1, strKey)
-	end
-end
-
---function AllySelector:RemoveKeyFromIteration(strKeyComparator, nKeyCurrent)
-function AllySelector:RemoveKeyFromIteration(strKey)
-	-- Remove the key (player name) from the tAlliesInRegionByIteration table.
-
-	-- nKeyCurrent, value = next(self.tAlliesInRegionByIteration, nKeyCurrent)
-	--
-	-- if not nKeyCurrent then
-	-- 	return
-	-- elseif value == strKeyComparator then
-	-- 	self.tAlliesInRegionByIteration[nKeyCurrent] = nil
-	-- 	return
-	-- else
-	-- 	return self:RemoveKeyFromIteration(strKeyComparator, nKeyCurrent)
+	-- if self.tAlliesInRegionByName[unit:GetName()] then
+	-- 	self.tAlliesInRegionByName[unit:GetName()] = nil
+	-- 	--self:RemoveKeyFromIteration(unit:GetName(), nil)
+	-- 	self:RemoveKeyFromIteration(unit:GetName())
+	-- 	self.nAlliesInRegion = self.nAlliesInRegion - 1
 	-- end
 
-	for k, v in pairs(self.tAlliesInRegionByIteration) do
-		if v == strKey then
-			-- Iterate until a match if found then remove it.
-			self.tAlliesInRegionByIteration[k] = nil
-			break
-		end
+	if unit:GetType() == "Player" then
+
+		self.ulistAlliesInRegion:Remove(unit)
+		self.ulistAlliesInRegion:SortByLowestHealth()
 	end
+
 end
+
+--------------------------------
+-- Smart Selection Algorithms
+--------------------------------
+
+-- function AllySelector:AddKeyToIteration(nIteration, strKey)
+-- 	-- Add the key (player name) from tAlliesInRegionByName to tAlliesInRegionByIteration
+-- 	-- to have an ordered list that can be iterated through without a pairs loop.
+--
+-- 	if not self.tAlliesInRegionByIteration[nIteration] then
+-- 		-- Check if this index is not occupied then add the key.
+-- 		self.tAlliesInRegionByIteration[nIteration] = strKey
+-- 	else
+-- 		-- Recursively iterate to the next index until an empty one if found.
+-- 		return self:AddKeyToIteration(nIteration + 1, strKey)
+-- 	end
+-- end
+--
+-- --function AllySelector:RemoveKeyFromIteration(strKeyComparator, nKeyCurrent)
+-- function AllySelector:RemoveKeyFromIteration(strKey)
+-- 	-- Remove the key (player name) from the tAlliesInRegionByIteration table.
+--
+-- 	-- nKeyCurrent, value = next(self.tAlliesInRegionByIteration, nKeyCurrent)
+-- 	--
+-- 	-- if not nKeyCurrent then
+-- 	-- 	return
+-- 	-- elseif value == strKeyComparator then
+-- 	-- 	self.tAlliesInRegionByIteration[nKeyCurrent] = nil
+-- 	-- 	return
+-- 	-- else
+-- 	-- 	return self:RemoveKeyFromIteration(strKeyComparator, nKeyCurrent)
+-- 	-- end
+--
+-- 	for k, v in pairs(self.tAlliesInRegionByIteration) do
+-- 		if v == strKey then
+-- 			-- Iterate until a match if found then remove it.
+-- 			self.tAlliesInRegionByIteration[k] = nil
+-- 			break
+-- 		end
+-- 	end
+-- end
 
 function AllySelector:SelectAlly(nKeycode)
 	-- Main function that is excuted when tab (or some other set binding) is pressed.
@@ -200,15 +219,22 @@ function AllySelector:GetAllyInRange(nIndex)
 		return 1
 	end
 
-	if nIndex > self.nAlliesInRegion then
+	--if nIndex > self.nAlliesInRegion then
+	if nIndex > self.ulistAlliesInRegion:GetSize() then
 		nIndex = 1
 	end
 
-	local unitAlly = self.tAlliesInRegionByName[self.tAlliesInRegionByIteration[nIndex]]
+	--local unitAlly = self.tAlliesInRegionByName[self.tAlliesInRegionByIteration[nIndex]]
+	local unitAlly = self.ulistAlliesInRegion:GetAtIndex(nIndex)
 
 	if not unitAlly then
-		--Print("Nil reference; Index: " .. tostring(nIndex))
+		Print("Nil reference; Index: " .. tostring(nIndex))
 		--Print("Selection: " .. tostring(self.nSelection))
+		return self:GetAllyInRange(nIndex + 1)
+
+	elseif not unitAlly:IsValid() then
+		--Print("Invlid unit; Index: " .. tostring(nIndex))
+		self.ulistAlliesInRegion:Remove(nil, nIndex)
 		return self:GetAllyInRange(nIndex + 1)
 
 	elseif not self:IsAllyInRange(unitAlly, nIndex) then
@@ -216,15 +242,7 @@ function AllySelector:GetAllyInRange(nIndex)
 		--Print("Selection: " .. tostring(self.nSelection))
 		return self:GetAllyInRange(nIndex + 1)
 
-	-- Occlusion check to prevent selection through solid objects.
-	-- IsOccluded() seems buggy in the sense that its returning true for some units
-	-- right in front of the player.
-
-	-- elseif unitAlly:IsOccluded() then
-	-- 	Print(unitAlly:GetName() .. " is occluded: Index: " .. tostring(nIndex))
-	-- 	Print("Selection: " .. tostring(self.nSelection))
-	-- 	return self:GetAllyInRange(nIndex + 1)
-elseif not self:IsSameFactionOrInGroup(unitAlly) then
+	elseif not self:IsSameFactionOrInGroup(unitAlly) then
 		--Print(unitAlly():GetName() .. " is not same faction or in same group: Index: " .. tostring(nIndex))
 		return self:GetAllyInRange(nIndex + 1)
 
@@ -241,73 +259,99 @@ elseif not self:IsSameFactionOrInGroup(unitAlly) then
 	end
 end
 
-function AllySelector:GetLowestHealthAllyInRange(nIteration, unitLowest)
+function AllySelector:GetLowestHealthAllyInRange(nIndex)
+	-- Get next ally from list assuming the list is already sorted by lowest health.
 
-	if nIteration > self.nAlliesInRegion then
-		-- Break recursion and return once the last unit is reached.
-		return unitLowest
+	nIndex = nIndex or 1
+
+	if nIndex > self.ulistAlliesInRegion:GetSize() then
+		return self.ulistAlliesInRegion:Get()
 	end
 
-	local unitNext = self.tAlliesInRegionByName[self.tAlliesInRegionByIteration[nIteration]]
+	local unitNext = self.ulistAlliesInRegion:GetAtIndex(nIndex)
 
-	if not unitNext then
-		-- Iterate to next ally if current reference is nil, meaning the client
-		-- doesn't have the current player loaded in scene or is too far out of range.
-		return self:GetLowestHealthAllyInRange(nIteration + 1, unitLowest)
-
-	elseif not self:IsAllyInRange(unitNext, nIteration) then
-		-- If unit is not in self's defined range, iterate to the next one in group.
-		return self:GetLowestHealthAllyInRange(nIteration + 1, unitLowest)
+	if not self:IsAllyInRange(unitNext, nIndex) then
+		return self:GetLowestHealthAllyInRange(nIndex + 1)
 
 	elseif not self:IsSameFactionOrInGroup(unitNext) then
-		return self:GetLowestHealthAllyInRange(nIteration + 1, unitLowest)
+		return self:GetLowestHealthAllyInRange(nIndex + 1)
 
 	elseif unitNext:IsDead() then
-		return self:GetLowestHealthAllyInRange(nIteration + 1, unitLowest)
+		return self:GetLowestHealthAllyInRange(nIndex + 1)
 
-	elseif self:GetHealthPercent(unitLowest) > self:GetHealthPercent(unitNext) then
-		-- If the first player's heath is greater than the next player's, set that player
-		-- as the lowest health player and recursively compare to the next player in order.
-		return self:GetLowestHealthAllyInRange(nIteration + 1, unitNext)
+	elseif self:IsBolsterApplied(unitNext) then
+		return self:GetLowestHealthAllyInRange(nIndex + 1)
 
 	else
-		-- If first player's health is lower, then set this player as lowest and recursive compare next
-		-- player in order.
-		return self:GetLowestHealthAllyInRange(nIteration + 1, unitLowest)
+		-- This the lowest health ally that is in range, same faction or group,
+		-- is not dead, and does not have a Bolster buff.
+		return unitNext
+
 	end
 end
 
-function AllySelector:BubbleSortAlliesByHealth(tPlayers, key, bIsSorted)
-	-- Only functions correctly on a table with numbers as keys counting in
-	-- consecutive order from 1.
+-- Depreciated. Get lowest health ally from an unsorted list.
+-- function AllySelector:GetLowestHealthAllyInRange(nIteration, unitLowest)
+--
+-- 	--if nIteration > self.nAlliesInRegion then
+-- 	if nIteration > self.ulistAlliesInRegion:GetSize() then
+-- 		-- Break recursion and return once the last unit is reached.
+-- 		return unitLowest
+-- 	end
+--
+-- 	--local unitNext = self.tAlliesInRegionByName[self.tAlliesInRegionByIteration[nIteration]]
+-- 	local unitNext = self.ulistAlliesInRegion:GetAtIndex(nIteration)
+--
+-- 	if not unitNext then
+-- 		-- Iterate to next ally if current reference is nil, meaning the client
+-- 		-- doesn't have the current player loaded in scene or is too far out of range.
+-- 		return self:GetLowestHealthAllyInRange(nIteration + 1, unitLowest)
+--
+-- 	elseif not unitNext:IsValid() then
+-- 		-- Check if unit exists, if not then remove it from the list and iterate
+-- 		-- to the next one.
+-- 		self.ulistAlliesInRegion:Remove(unitNext)
+-- 		return self:GetLowestHealthAllyInRange(nIteration + 1, unitLowest)
+--
+-- 	elseif not self:IsAllyInRange(unitNext, nIteration) then
+-- 		-- If unit is not in self's defined range, iterate to the next one in group.
+-- 		return self:GetLowestHealthAllyInRange(nIteration + 1, unitLowest)
+--
+-- 	elseif not self:IsSameFactionOrInGroup(unitNext) then
+-- 		return self:GetLowestHealthAllyInRange(nIteration + 1, unitLowest)
+--
+-- 	elseif unitNext:IsDead() then
+-- 		return self:GetLowestHealthAllyInRange(nIteration + 1, unitLowest)
+--
+-- 	elseif self:GetHealthPercent(unitLowest) > self:GetHealthPercent(unitNext) then
+-- 		-- If the first player's heath is greater than the next player's, set that player
+-- 		-- as the lowest health player and recursively compare to the next player in order.
+-- 		return self:GetLowestHealthAllyInRange(nIteration + 1, unitNext)
+--
+-- 	else
+-- 		-- If first player's health is lower, then set this player as lowest and recursive compare next
+-- 		-- player in order.
+-- 		return self:GetLowestHealthAllyInRange(nIteration + 1, unitLowest)
+-- 	end
+-- end
 
-	local k1, v1 = next(tAllies, key)
-	local k2, v2 = next(tAllies, k1)
+function AllySelector:IsSameFactionOrInGroup(unit)
+	--Print(tostring(unit:GetFaction()))
+	--Print(tostring(GameLib.GetPlayerUnit()))
+	--do return true end
 
-	if not k1 or not k2 then
-		-- When the end of the table has been reached.
-
-		if not bIsSorted then
-			return bubbleSortAlliesByHealth(tAllies, nil, true)
-		else
-			-- Sorting complete.
-			return tPlayers
-		end
-
-	elseif v1.health > v2.health then
-
-		tAllies[k1] = v2
-		tAllies[k2] = v1
-
-		return bubbleSortPlayersByHealth(tAllies, k1, false)
-
+	if unit:GetFaction() == GameLib.GetPlayerUnit():GetFaction() then
+		return true
+	elseif unit:IsInYourGroup() then
+		return true
 	else
-		return bubbleSortPlayersByHealth(tAllies, k1, bIsSorted)
+		return false
 	end
 end
 
 function AllySelector:IsBolsterApplied(unitAlly)
 	-- Check ally reference for the Bolster buff.
+	-- Shameful for-in-pairs loop with no recursion.
 
 	for k, v in pairs( unitAlly:GetBuffs().arBeneficial ) do
 		if v.splEffect:GetName() == "Bolster" then
@@ -332,7 +376,7 @@ function AllySelector:IsAllyInRange(unitAlly, nIndex)
 
 	-- Error handling for possible nil reference.
 	if not tAllyPos then
-		Print("AllySelector: Error: Position for unit at index " .. nIndex .. " could not be obtained.")
+		Print("AllySelector: Error: Position for unit at index " .. tosting(nIndex) .. " could not be obtained.")
 		Print(unitAlly:GetName() .. " valid: " .. tostring(unitAlly():IsValid()))
 		return false
 	end
@@ -352,6 +396,10 @@ function AllySelector:GetHealthPercent(unit)
 
 	return ((unit:GetHealth() * 100) / unit:GetMaxHealth()) / 100
 end
+
+----------------------------
+-- Bookmarking System
+----------------------------
 
 function AllySelector:SetBookmark()
 	-- Called when the slash command is invoked.
