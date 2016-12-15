@@ -1,5 +1,5 @@
 ----------------------------------
--- Program: AllySelector 1.6
+-- Program: AllySelector 1.6.1
 -- Author: GhostRavenstorm
 -- Date: 2016-12-14
 ----------------------------------
@@ -50,22 +50,24 @@ Bookmarks will be erased when ui is reloaded.
 ----------------------------------
 -- Change Log
 ----------------------------------
-1.6  -- Removed the 0 from version control.
-     -- Included ArrayList class to replace table setup for allies in range and
-        other libs.
-     -- Rewrote algorithmic selection to use the ArrayList class.
-     -- Included smart selection checks for the Bolster buff.
+1.6.1 -- Code cleanup.
 
-1.05 -- Added check for same faction as player or same group.
-     -- Added check for if unit is dead.
+1.6   -- Removed the 0 from version control.
+      -- Included ArrayList class to replace table setup for allies in range and
+         other libs.
+      -- Rewrote algorithmic selection to use the ArrayList class.
+      -- Included smart selection checks for the Bolster buff.
 
-1.04 -- Removed the need for GroupLib to get player references. All friendly
-        players loaded in the region are saved and used as references.
-     -- Added bookmarks to quickly save priority healing targets to a key.
+1.05  -- Added check for same faction as player or same group.
+      -- Added check for if unit is dead.
 
-1.03 -- Removed Debug code.
-     -- Reinstated recursive loop for selecting lowest health ally.
+1.04  -- Removed the need for GroupLib to get player references. All friendly
+         players loaded in the region are saved and used as references.
+      -- Added bookmarks to quickly save priority healing targets to a key.
 
-1.02 -- Fixed infinite recursive loop.
+1.03  -- Removed Debug code.
+      -- Reinstated recursive loop for selecting lowest health ally.
 
-1.01 -- Resolved a crucial bug that was trying to select players out of range.
+1.02  -- Fixed infinite recursive loop.
+
+1.01  -- Resolved a crucial bug that was trying to select players out of range.

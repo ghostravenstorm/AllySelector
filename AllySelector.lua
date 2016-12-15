@@ -1,5 +1,5 @@
 -----------------------------------
--- Program: AllySelector 1.6
+-- Program: AllySelector 1.6.1
 -- Author: GhostRavenstorm
 -- Date: 2016-12-14
 
@@ -37,9 +37,6 @@ function AllySelector:New(o)
 	self.nDefaultRange = 35
 
 	self.nSelection = 1
-	--o.nAlliesInRegion = 0
-	--o.tAlliesInRegionByName = {}
-	--o.tAlliesInRegionByIteration = {}
 
 	self.tTargetBookmarks = {}
 	self.nLastBookmark = nil
@@ -74,24 +71,25 @@ function AllySelector:ResetKeyDownEventHandlers()
 	--Apollo.RegisterEventHandler("SystemKeyDown", "Debug", self)
 end
 
-function AllySelector:Debug(nKeyCode)
-	if nKeyCode == 70 then
-		-- for k, v in pairs(self.tAlliesInRegionByIteration) do
-		-- 	Print(tostring(k) .. " " .. v)
-		-- end
-		-- Print("Allies: " .. tostring(self.nAlliesInRegion))
-
-		for i = 1, self.ulistAlliesInRegion:GetSize() do
-			Print(tostring(i) .. ": " .. self.ulistAlliesInRegion:GetAtIndex(i):GetName())
-		end
-
-		--self.ulistAlliesInRegion:Print()
-	end
-
-	if nKeyCode == 71 then
-		Print(tostring(getmetatable(self.ulistAlliesInRegion:GetAtIndex(1))))
-	end
-end
+-- Debug code.
+-- function AllySelector:Debug(nKeyCode)
+-- 	if nKeyCode == 70 then
+-- 		-- for k, v in pairs(self.tAlliesInRegionByIteration) do
+-- 		-- 	Print(tostring(k) .. " " .. v)
+-- 		-- end
+-- 		-- Print("Allies: " .. tostring(self.nAlliesInRegion))
+--
+-- 		for i = 1, self.ulistAlliesInRegion:GetSize() do
+-- 			Print(tostring(i) .. ": " .. self.ulistAlliesInRegion:GetAtIndex(i):GetName())
+-- 		end
+--
+-- 		--self.ulistAlliesInRegion:Print()
+-- 	end
+--
+-- 	if nKeyCode == 71 then
+-- 		Print(tostring(getmetatable(self.ulistAlliesInRegion:GetAtIndex(1))))
+-- 	end
+-- end
 
 function AllySelector:TraceKey()
 	Apollo.RegisterEventHandler("SystemKeyDown", "SetDefaultKey", self)
@@ -112,12 +110,6 @@ function AllySelector:OnUnitCreated(unit)
 
 	-- Sort units loaded into a table if a player.
 	if unit:GetType() == "Player" then
-		-- if self.tAlliesInRegionByName[unit:GetName()] ~= unit then
-		-- 	-- Check if name already exists.
-		-- 	self:AddKeyToIteration(1, unit:GetName())
-		-- 	self.tAlliesInRegionByName[unit:GetName()] = unit
-		-- 	self.nAlliesInRegion = self.nAlliesInRegion + 1
-		-- end
 
 		self.ulistAlliesInRegion:Add(unit)
 		self.ulistAlliesInRegion:SortByLowestHealth()
@@ -130,14 +122,6 @@ end
 
 function AllySelector:OnUnitDestroyed(unit)
 
-	-- Remove unit from table if in table.
-	-- if self.tAlliesInRegionByName[unit:GetName()] then
-	-- 	self.tAlliesInRegionByName[unit:GetName()] = nil
-	-- 	--self:RemoveKeyFromIteration(unit:GetName(), nil)
-	-- 	self:RemoveKeyFromIteration(unit:GetName())
-	-- 	self.nAlliesInRegion = self.nAlliesInRegion - 1
-	-- end
-
 	if unit:GetType() == "Player" then
 
 		self.ulistAlliesInRegion:Remove(unit)
@@ -149,43 +133,6 @@ end
 --------------------------------
 -- Smart Selection Algorithms
 --------------------------------
-
--- function AllySelector:AddKeyToIteration(nIteration, strKey)
--- 	-- Add the key (player name) from tAlliesInRegionByName to tAlliesInRegionByIteration
--- 	-- to have an ordered list that can be iterated through without a pairs loop.
---
--- 	if not self.tAlliesInRegionByIteration[nIteration] then
--- 		-- Check if this index is not occupied then add the key.
--- 		self.tAlliesInRegionByIteration[nIteration] = strKey
--- 	else
--- 		-- Recursively iterate to the next index until an empty one if found.
--- 		return self:AddKeyToIteration(nIteration + 1, strKey)
--- 	end
--- end
---
--- --function AllySelector:RemoveKeyFromIteration(strKeyComparator, nKeyCurrent)
--- function AllySelector:RemoveKeyFromIteration(strKey)
--- 	-- Remove the key (player name) from the tAlliesInRegionByIteration table.
---
--- 	-- nKeyCurrent, value = next(self.tAlliesInRegionByIteration, nKeyCurrent)
--- 	--
--- 	-- if not nKeyCurrent then
--- 	-- 	return
--- 	-- elseif value == strKeyComparator then
--- 	-- 	self.tAlliesInRegionByIteration[nKeyCurrent] = nil
--- 	-- 	return
--- 	-- else
--- 	-- 	return self:RemoveKeyFromIteration(strKeyComparator, nKeyCurrent)
--- 	-- end
---
--- 	for k, v in pairs(self.tAlliesInRegionByIteration) do
--- 		if v == strKey then
--- 			-- Iterate until a match if found then remove it.
--- 			self.tAlliesInRegionByIteration[k] = nil
--- 			break
--- 		end
--- 	end
--- end
 
 function AllySelector:SelectAlly(nKeycode)
 	-- Main function that is excuted when tab (or some other set binding) is pressed.
@@ -219,12 +166,10 @@ function AllySelector:GetAllyInRange(nIndex)
 		return 1
 	end
 
-	--if nIndex > self.nAlliesInRegion then
 	if nIndex > self.ulistAlliesInRegion:GetSize() then
 		nIndex = 1
 	end
 
-	--local unitAlly = self.tAlliesInRegionByName[self.tAlliesInRegionByIteration[nIndex]]
 	local unitAlly = self.ulistAlliesInRegion:GetAtIndex(nIndex)
 
 	if not unitAlly then
@@ -338,7 +283,6 @@ end
 function AllySelector:IsSameFactionOrInGroup(unit)
 	--Print(tostring(unit:GetFaction()))
 	--Print(tostring(GameLib.GetPlayerUnit()))
-	--do return true end
 
 	if unit:GetFaction() == GameLib.GetPlayerUnit():GetFaction() then
 		return true
