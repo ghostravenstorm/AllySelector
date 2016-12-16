@@ -1,5 +1,5 @@
 -----------------------------------
--- Program: UnitArrayList 1.0
+-- Program: UnitArrayList 1.0.1
 -- Author: GhostRavenstorm
 -- Date: 2016-12-14
 
@@ -20,8 +20,8 @@ function UnitArrayList:New(o)
 	setmetatable(o, self)
 	self.__index = self
 
-	self._tList = tList or {}
-	self._nSize = nSize or 0
+	--self._tList = tList or {}
+	--self._nSize = nSize or 0
 
 	return o
 end
@@ -31,13 +31,14 @@ function UnitArrayList:SortByLowestHealth(nIndex, bIsSorted)
 
 	nIndex = nIndex or 1
 
-	if nIndex > self._nSize - 1 then
+	if nIndex > self._nLength - 1 then
 		-- When the end of the list has been reached.
 
 		if not bIsSorted then
-			return self:SortByLowestHealth(nIndex + 1, true)
+			return self:SortByLowestHealth(1, true)
 		else
 			-- Sorting complete.
+			--Print("List sorted.")
 			return
 		end
 

@@ -1,7 +1,7 @@
 ----------------------------------
--- Program: AllySelector 1.6.1
+-- Program: AllySelector 1.7.0
 -- Author: GhostRavenstorm
--- Date: 2016-12-14
+-- Date: 2016-12-15
 ----------------------------------
 
 ----------------------------------
@@ -23,8 +23,6 @@ Bookmark Priority Allies:
 ----------------------------------
 -- Notes
 ----------------------------------
-This addon currently contains no GUI that can be invoked.
-
 Ensure the Debug channel in chat window is on to receive messages
 about this addon.
 
@@ -36,20 +34,30 @@ Bookmarks will be erased when ui is reloaded.
 ----------------------------------
 -- Slash Commands
 ----------------------------------
+/as-bm     -- Brings up the bookmark manager window.
+
 /as-setkey -- The next key press after invoking this command will set the default
               macro key to that key.
 
-/as-setbm  -- The next key press after invoking this command will set the currently
+/as-setbm  -- Depreciated. The next key press after invoking this command will set the currently
               selected ally to that key.
 
-/as-undo   -- Removes the last target assigned to a keybind (one time only).
+/as-undo   -- Depreciated. Removes the last target assigned to a keybind (one time only).
 
-/as-clear  -- Erases all bookmarks.
+/as-clear  -- Depreciated. Erases all bookmarks.
 
 
 ----------------------------------
 -- Change Log
 ----------------------------------
+1.7.0 -- Revamped old bookmarking system with new UI based version.
+      -- Removed slash commands /as-setbm, /as-undo, /as-clear.
+      -- Added slash command /as-bm to bring up the bookmark manager window.
+      -- Included a new FixedArray class.
+      -- Included xml doc for UI component.
+
+1.6.2 -- Moved sorting call to on key event instead of unit created.
+
 1.6.1 -- Code cleanup.
 
 1.6   -- Removed the 0 from version control.

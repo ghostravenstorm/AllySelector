@@ -1,7 +1,7 @@
 -----------------------------------
--- Program: AllySelector 1.6.1
+-- Program: AllySelector 1.7.0
 -- Author: GhostRavenstorm
--- Date: 2016-12-14
+-- Date: 2016-12-15
 
 -- Description: Addon for Wildstar designed to algorithmically select and cycle
 -- through a list of priority allies in need of assitance based on health
@@ -15,7 +15,7 @@
 --   str   = string
 --   f     = function
 --   unit  = Unit
---   list  = ArrayList
+--   list  = ArrayList or FixedArray
 --   ulist = UnitArrayList
 
 require "Window"
@@ -25,6 +25,7 @@ local AllySelector = {}
 
 -- Module definitions
 local ArrayList = Apollo.GetPackage("Lib:ArrayList").tPackage
+local FixedArray = Apollo.GetPackage("Lib:FixedArray").tPackage
 local UnitArrayList = Apollo.GetPackage("Lib:UnitArrayList").tPackage
 
 -- New instance of Selector
@@ -42,7 +43,7 @@ function AllySelector:New(o)
 	self.nLastBookmark = nil
 
 	self.ulistAlliesInRegion = UnitArrayList:New()
-	--self.listAlliesBookmarked = ArrayList:New()
+	self.listAlliesBookmarked = FixedArray:New(5)
 
 	return o
 end
@@ -56,10 +57,14 @@ function AllySelector:Init()
 end
 
 function AllySelector:OnLoad()
+	self.xmlDoc = XmlDoc.CreateFromFile("AllySelector.xml")
+	self.xmlDoc:RegisterCallback("OnDocLoaded", self)
+
 	Apollo.RegisterSlashCommand("as-setkey", "TraceKey", self)
-	Apollo.RegisterSlashCommand("as-setbm", "SetBookmark", self)
-	Apollo.RegisterSlashCommand("as-clear", "ClearBookmarks", self)
-	Apollo.RegisterSlashCommand("as-undo", "UndoLastBookmark", self)
+	Apollo.RegisterSlashCommand("as-bm", "OnBookmarkManager", self)
+	--Apollo.RegisterSlashCommand("as-setbm", "SetBookmark", self)
+	--Apollo.RegisterSlashCommand("as-clear", "ClearBookmarks", self)
+	--Apollo.RegisterSlashCommand("as-undo", "UndoLastBookmark", self)
 	Apollo.RegisterEventHandler("UnitCreated", "OnUnitCreated", self)
 	Apollo.RegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
 	self:ResetKeyDownEventHandlers()
@@ -68,28 +73,44 @@ end
 function AllySelector:ResetKeyDownEventHandlers()
 	Apollo.RegisterEventHandler("SystemKeyDown", "SelectAlly", self)
 	Apollo.RegisterEventHandler("SystemKeyDown", "GetBookmark", self)
-	--Apollo.RegisterEventHandler("SystemKeyDown", "Debug", self)
+	Apollo.RegisterEventHandler("SystemKeyDown", "Debug", self)
 end
 
+function AllySelector:OnDocLoaded()
+	if self.xmlDoc ~= nil and self.xmlDoc:IsLoaded() then
+	    self.wndMain = Apollo.LoadForm(self.xmlDoc, "BookmarksForm", nil, self)
+		if self.wndMain == nil then
+			Apollo.AddAddonErrorText(self, "Could not load the main window for some reason.")
+			return
+		end
+
+	    self.wndMain:Show(false, true)
+	 end
+ end
+
 -- Debug code.
--- function AllySelector:Debug(nKeyCode)
--- 	if nKeyCode == 70 then
--- 		-- for k, v in pairs(self.tAlliesInRegionByIteration) do
--- 		-- 	Print(tostring(k) .. " " .. v)
--- 		-- end
--- 		-- Print("Allies: " .. tostring(self.nAlliesInRegion))
---
--- 		for i = 1, self.ulistAlliesInRegion:GetSize() do
--- 			Print(tostring(i) .. ": " .. self.ulistAlliesInRegion:GetAtIndex(i):GetName())
--- 		end
---
--- 		--self.ulistAlliesInRegion:Print()
--- 	end
---
--- 	if nKeyCode == 71 then
--- 		Print(tostring(getmetatable(self.ulistAlliesInRegion:GetAtIndex(1))))
--- 	end
--- end
+function AllySelector:Debug(nKeyCode)
+	if nKeyCode == 70 then
+		-- for k, v in pairs(self.tAlliesInRegionByIteration) do
+		-- 	Print(tostring(k) .. " " .. v)
+		-- end
+		-- Print("Allies: " .. tostring(self.nAlliesInRegion))
+
+		--self.wndMain:Invoke()
+
+		self.listAlliesBookmarked:Print()
+
+		-- for i = 1, self.ulistAlliesInRegion:GetLength() do
+		-- 	Print(tostring(i) .. ": " .. self.ulistAlliesInRegion:GetFromIndex(i):GetName())
+		-- end
+
+		--self.ulistAlliesInRegion:Print()
+	end
+
+	if nKeyCode == 71 then
+		--self.wndMain:Close()
+	end
+end
 
 function AllySelector:TraceKey()
 	Apollo.RegisterEventHandler("SystemKeyDown", "SetDefaultKey", self)
@@ -112,8 +133,6 @@ function AllySelector:OnUnitCreated(unit)
 	if unit:GetType() == "Player" then
 
 		self.ulistAlliesInRegion:Add(unit)
-		self.ulistAlliesInRegion:SortByLowestHealth()
-
 	end
 
 	-- Note: There seems to be a bug with the UnitCreated event where its triggering
@@ -125,7 +144,6 @@ function AllySelector:OnUnitDestroyed(unit)
 	if unit:GetType() == "Player" then
 
 		self.ulistAlliesInRegion:Remove(unit)
-		self.ulistAlliesInRegion:SortByLowestHealth()
 	end
 
 end
@@ -139,8 +157,10 @@ function AllySelector:SelectAlly(nKeycode)
 
 	if nKeycode == self.nDefaultKey then
 
+		self.ulistAlliesInRegion:SortByLowestHealth()
+
 		-- Get lowest health ally using the first party memeber, the player, as the first comparision.
-		local unitNextTarget = self:GetLowestHealthAllyInRange(1, GameLib.GetPlayerUnit())
+		local unitNextTarget = self:GetLowestHealthAllyInRange()
 
 		-- If the first party member is returned and is at 100%, meaning no other party member has
 		-- lost any health, then select the next party member in order.
@@ -166,11 +186,11 @@ function AllySelector:GetAllyInRange(nIndex)
 		return 1
 	end
 
-	if nIndex > self.ulistAlliesInRegion:GetSize() then
+	if nIndex > self.ulistAlliesInRegion:GetLength() then
 		nIndex = 1
 	end
 
-	local unitAlly = self.ulistAlliesInRegion:GetAtIndex(nIndex)
+	local unitAlly = self.ulistAlliesInRegion:GetFromIndex(nIndex)
 
 	if not unitAlly then
 		Print("Nil reference; Index: " .. tostring(nIndex))
@@ -209,11 +229,11 @@ function AllySelector:GetLowestHealthAllyInRange(nIndex)
 
 	nIndex = nIndex or 1
 
-	if nIndex > self.ulistAlliesInRegion:GetSize() then
+	if nIndex > self.ulistAlliesInRegion:GetLength() then
 		return self.ulistAlliesInRegion:Get()
 	end
 
-	local unitNext = self.ulistAlliesInRegion:GetAtIndex(nIndex)
+	local unitNext = self.ulistAlliesInRegion:GetFromIndex(nIndex)
 
 	if not self:IsAllyInRange(unitNext, nIndex) then
 		return self:GetLowestHealthAllyInRange(nIndex + 1)
@@ -239,13 +259,13 @@ end
 -- function AllySelector:GetLowestHealthAllyInRange(nIteration, unitLowest)
 --
 -- 	--if nIteration > self.nAlliesInRegion then
--- 	if nIteration > self.ulistAlliesInRegion:GetSize() then
+-- 	if nIteration > self.ulistAlliesInRegion:GetLength() then
 -- 		-- Break recursion and return once the last unit is reached.
 -- 		return unitLowest
 -- 	end
 --
 -- 	--local unitNext = self.tAlliesInRegionByName[self.tAlliesInRegionByIteration[nIteration]]
--- 	local unitNext = self.ulistAlliesInRegion:GetAtIndex(nIteration)
+-- 	local unitNext = self.ulistAlliesInRegion:GetFromIndex(nIteration)
 --
 -- 	if not unitNext then
 -- 		-- Iterate to next ally if current reference is nil, meaning the client
@@ -345,65 +365,147 @@ end
 -- Bookmarking System
 ----------------------------
 
-function AllySelector:SetBookmark()
-	-- Called when the slash command is invoked.
+function AllySelector:SetAlly(wndHandler, wndControl, eMouseButton)
+	local unit = GameLib.GetPlayerUnit():GetTarget()
 
-	Print("AllySelector Bookmark: Next key press will bind currently selected player to that key.")
-	Apollo.RegisterEventHandler("SystemKeyDown", "OnSetBookmark", self)
-end
+	-- for k, v in next, getmetatable(button) do
+	-- 	--Print(k)
+	-- end
+	--Print(button:GetContentId())
+	--Print(tostring(wndControl))
+	--Print(tostring(eMouseButton))
+	--Print(tostring(wndHandler:GetContentId()))
 
-function AllySelector:ClearBookmarks()
-	-- Clears all keys with saved units.
-
-	self.tTargetBookmarks = {}
-	Print("AllySelector Bookmark: All bookmarks have been cleared.")
-end
-
-function AllySelector:UndoLastBookmark()
-	-- Clears the last key that a unit was saved to.
-
-	local unitLast = self.tTargetBookmarks[self.nLastBookmark]
-
-	if unitLast then
-		Print("AllySelector Bookmark: " .. unitLast:GetName() .. " has been removed from key " .. tostring(self.nLastBookmark))
-		self.tTargetBookmarks[self.nLastBookmark] = nil
-	else
-		Print("AllySelector Bookmark: There is no unit on key " .. tostring(self.nLastBookmark) .. " to remove.")
-	end
-end
-
-function AllySelector:OnSetBookmark(nKeycode)
-	-- Called on next key press after slash command is invoked.
-	-- Sets next key press as macro to selected the currently selected unit
-
-	Apollo.RemoveEventHandler("SystemKeyDown", self)
-	self:ResetKeyDownEventHandlers()
-
-	local unitTarget = GameLib.GetPlayerUnit():GetTarget()
-
-	if unitTarget then
-		-- If there is a unit selected.
-
-		if unitTarget:GetType() == "Player" then
-			-- If unit is a player.
-
-			self.tTargetBookmarks[nKeycode] = unitTarget
-			self.nLastBookmark = nKeycode
-			Print("AllySelector Bookmark: " .. unitTarget:GetName() .. " set to key " .. tostring(nKeycode))
+	if unit then
+		if unit:GetType() == "Player" then
+			if self:IsSameFactionOrInGroup(unit) then
+				self.wndMain:FindChild("Ally" .. tostring(wndHandler:GetContentId())):FindChild("AllyName"):SetText(unit:GetName())
+				self.wndMain:FindChild("TextStatus"):SetText("Slot " .. tostring(wndHandler:GetContentId()) .. " set to " .. unit:GetName())
+				self.listAlliesBookmarked:AddToIndex(unit, wndHandler:GetContentId())
+			else
+				self.wndMain:FindChild("TextStatus"):SetText("Error: Target is not same faction or in group.")
+			end
 		else
-			Print("AllySelector Bookmark: No valid target selected to set bookmark.")
+			self.wndMain:FindChild("TextStatus"):SetText("Error: Target is not a player.")
 		end
+	else
+		-- No target.
+		self.wndMain:FindChild("TextStatus"):SetText("Error: No valid target selected.")
 	end
+end
+
+function AllySelector:ClearAlly(wndHandler, wndControl, eMouseButton)
+	--Print(button:GetContentId())
+	self.wndMain:FindChild("Ally" .. tostring(wndHandler:GetContentId())):FindChild("AllyName"):SetText("Empty")
+	self.wndMain:FindChild("TextStatus"):SetText("Slot " .. tostring(wndHandler:GetContentId()) .. " cleared.")
+	self.listAlliesBookmarked:RemoveFromIndex(wndHandler:GetContentId())
 end
 
 function AllySelector:GetBookmark(nKeycode)
-	-- Called when any key is pressed.
 
-	if self.tTargetBookmarks[nKeycode] then
-		-- Check if key pressed has a unit saved to it.
-		GameLib.SetTargetUnit(self.tTargetBookmarks[nKeycode])
+	-- Assign keys F1 through F5 to coresponding indicies in the bookmark list.
+	local keys = {
+		[112] = 1,
+		[113] = 2,
+		[114] = 3,
+		[115] = 4,
+		[116] = 5
+	}
+
+	-- Filter for only F1 through F5.
+	local keyPressed = keys[nKeycode]
+	if not keyPressed then
+		return
+	end
+
+	-- Grab unit from the appropiate index in the list based on the key.
+	local unit = self.listAlliesBookmarked:GetFromIndex(keys[nKeycode])
+
+	-- Check if somthing is there.
+	if unit then
+		-- Check if unit is valid.
+		if unit:IsValid() then
+			-- Select Unit.
+			GameLib.SetTargetUnit(unit)
+		else
+			-- Unit is not valid.
+			local textmsg = self.wndMain:FindChild("Ally" .. tostring(keys[nKeycode])):FindChild("AllyName"):GetText()
+			self.wndMain:FindChild("TextStatus"):SetText("Selection Error: " .. textmsg .. " is not a valid unit. They could be too far out of range.")
+		end
+	else
+		-- Nothing exists in this slot.
+		self.wndMain:FindChild("TextStatus"):SetText("Selection Error: Nothing is assigned to Slot " .. tostring(keys[nKeycode]))
 	end
 end
+
+function AllySelector:OnBookmarkManager()
+	self.wndMain:Invoke()
+end
+
+function AllySelector:CloseBookmarkManager()
+	self.wndMain:Close()
+	--self.wndMain:FindChild("TextStatus"):SetText("Bookmark Manager ready.")
+end
+
+-- function AllySelector:SetBookmark()
+-- 	-- Called when the slash command is invoked.
+--
+-- 	Print("AllySelector Bookmark: Next key press will bind currently selected player to that key.")
+-- 	Apollo.RegisterEventHandler("SystemKeyDown", "OnSetBookmark", self)
+-- end
+--
+-- function AllySelector:ClearBookmarks()
+-- 	-- Clears all keys with saved units.
+--
+-- 	self.tTargetBookmarks = {}
+-- 	Print("AllySelector Bookmark: All bookmarks have been cleared.")
+-- end
+--
+-- function AllySelector:UndoLastBookmark()
+-- 	-- Clears the last key that a unit was saved to.
+--
+-- 	local unitLast = self.tTargetBookmarks[self.nLastBookmark]
+--
+-- 	if unitLast then
+-- 		Print("AllySelector Bookmark: " .. unitLast:GetName() .. " has been removed from key " .. tostring(self.nLastBookmark))
+-- 		self.tTargetBookmarks[self.nLastBookmark] = nil
+-- 	else
+-- 		Print("AllySelector Bookmark: There is no unit on key " .. tostring(self.nLastBookmark) .. " to remove.")
+-- 	end
+-- end
+--
+-- function AllySelector:OnSetBookmark(nKeycode)
+-- 	-- Called on next key press after slash command is invoked.
+-- 	-- Sets next key press as macro to selected the currently selected unit
+--
+-- 	Apollo.RemoveEventHandler("SystemKeyDown", self)
+-- 	self:ResetKeyDownEventHandlers()
+--
+-- 	local unitTarget = GameLib.GetPlayerUnit():GetTarget()
+--
+-- 	if unitTarget then
+-- 		-- If there is a unit selected.
+--
+-- 		if unitTarget:GetType() == "Player" then
+-- 			-- If unit is a player.
+--
+-- 			self.tTargetBookmarks[nKeycode] = unitTarget
+-- 			self.nLastBookmark = nKeycode
+-- 			Print("AllySelector Bookmark: " .. unitTarget:GetName() .. " set to key " .. tostring(nKeycode))
+-- 		else
+-- 			Print("AllySelector Bookmark: No valid target selected to set bookmark.")
+-- 		end
+-- 	end
+-- end
+--
+-- function AllySelector:GetBookmark(nKeycode)
+-- 	-- Called when any key is pressed.
+--
+-- 	if self.tTargetBookmarks[nKeycode] then
+-- 		-- Check if key pressed has a unit saved to it.
+-- 		GameLib.SetTargetUnit(self.tTargetBookmarks[nKeycode])
+-- 	end
+-- end
 
 local AllySelectorInstance = AllySelector:New()
 AllySelectorInstance:Init()
