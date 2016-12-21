@@ -1,5 +1,5 @@
 -----------------------------------
--- Program: ArrayList 1.2
+-- Program: ArrayList 1.0.2
 -- Author: GhostRavenstorm
 -- Date: 2016-12-14
 
@@ -19,8 +19,8 @@ function ArrayList:New(o)
 	setmetatable(o, self)
 	self.__index = self
 
-	self._tList = tList or {}
-	self._nLength = nLength or 0
+	o._tList = tList or {}
+	o._nLength = nLength or 0
 
 	return o
 end
@@ -46,7 +46,6 @@ function ArrayList:Add(item, index)
    	if not self._tList[index] then
    		self._tList[index] = item
    		self._nLength = self._nLength + 1
-   		--Print("Adding " .. tostring(item))
    	else
    		return self:Add(item, index + 1)
    	end
@@ -74,7 +73,6 @@ function ArrayList:AddDuplicate(item, index)
    if not self._tList[index] then
       self._tList[index] = item
       self._nLength = self._nLength + 1
-      --Print("Adding: " .. tostring(o))
    else
       return self:AddDuplicate(item, index + 1)
    end
@@ -123,7 +121,6 @@ function ArrayList:Remove(item, index)
 
    elseif item == self._tList[index] then
 		-- Match for item is found here, remove it and consense list.
-      --Print("Removing " .. tostring(item))
 
 		self._tList[index] = nil
 		self:_Condense()
@@ -162,19 +159,6 @@ function ArrayList:RemoveFromIndex(index)
    end
 end
 
--- function ArrayList:RemoveFromIndexWithoutCondensing(index)
---    -- Remove item from the given index.
---
---    if index <= self._nLength then
---       self._tList[index] = nil
---       self._nLength = self._nLength - 1
---       return
---    else
---       -- There is nothing at this index to remove.
---       return
---    end
--- end
-
 function ArrayList:Get(item, index)
    -- Return first occurance of item in the list.
 
@@ -188,7 +172,7 @@ function ArrayList:Get(item, index)
       return self._tList[index]
    else
       -- Check next item.
-      return self.ArrayList:Get(item, index + 1)
+      return self:Get(item, index + 1)
    end
 end
 
@@ -231,7 +215,6 @@ function ArrayList:_IsDuplicate(item, index)
    if index > self._nLength then
       return false
    elseif item == self._tList[index] then
-      --Print(tostirng(o) .. " already exists in this list.")
       return true
    else
       return self:_IsDuplicate(item, index + 1)

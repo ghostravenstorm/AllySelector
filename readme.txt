@@ -1,5 +1,5 @@
 ----------------------------------
--- Program: AllySelector 1.7.0
+-- Program: AllySelector 1.7.1
 -- Author: GhostRavenstorm
 -- Date: 2016-12-15
 ----------------------------------
@@ -14,7 +14,8 @@ Smart Target Cycling:
      (while in PvP, only cycle through allies who are also in PvP, and ignore
      PvP allies if user is not in PvP).
    - Only selects units of the same faction as the player or if in same group as player.
-   - Espers: Skips over units that already have Bolster applied. (No absolute control yet, WIP)
+   - Target cycling will skips over units that already have Bolster applied.
+     (No absolute filtering controls yet to disable or enable; WIP)
 
 Bookmark Priority Allies:
    - Allows for the user to register a keybind to select a specific ally.
@@ -26,7 +27,7 @@ Bookmark Priority Allies:
 Ensure the Debug channel in chat window is on to receive messages
 about this addon.
 
-Keybind for target cycling will reset to its default, tab, when ui is reloaded.
+Keybind for target cycling is defaulted to tab currently
 
 Bookmarks will be erased when ui is reloaded.
 
@@ -36,27 +37,29 @@ Bookmarks will be erased when ui is reloaded.
 ----------------------------------
 /as-bm     -- Brings up the bookmark manager window.
 
-/as-setkey -- The next key press after invoking this command will set the default
+/as-setkey -- Obsolete. The next key press after invoking this command will set the default
               macro key to that key.
 
-/as-setbm  -- Depreciated. The next key press after invoking this command will set the currently
+/as-setbm  -- Obsolete. The next key press after invoking this command will set the currently
               selected ally to that key.
 
-/as-undo   -- Depreciated. Removes the last target assigned to a keybind (one time only).
+/as-undo   -- Obsolete. Removes the last target assigned to a keybind (one time only).
 
-/as-clear  -- Depreciated. Erases all bookmarks.
+/as-clear  -- Obsolete. Erases all bookmarks.
 
 
 ----------------------------------
 -- Change Log
 ----------------------------------
-1.7.0 -- Revamped old bookmarking system with new UI based version.
-      -- Removed slash commands /as-setbm, /as-undo, /as-clear.
+1.7.0 -- Revamped old bookmarking system with new UI based version that allows
+         the user to dynamically create bookmarks and set keybinds.
+      -- Removed slash commands /as-setbm, /as-undo, /as-clear, /as-setkey.
       -- Added slash command /as-bm to bring up the bookmark manager window.
       -- Included a new FixedArray class.
-      -- Included xml doc for UI component.
+      -- Moved sorting call to on key event instead of unit created.
+      -- Included a new WildstarObjectArrayList class.
+      -- Included a new WildstarUnitArrayList class.
 
-1.6.2 -- Moved sorting call to on key event instead of unit created.
 
 1.6.1 -- Code cleanup.
 

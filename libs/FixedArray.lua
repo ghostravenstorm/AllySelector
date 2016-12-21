@@ -1,5 +1,5 @@
 -----------------------------------
--- Program: FixedArray 1.0
+-- Program: FixedArray 1.0.1
 -- Author: GhostRavenstorm
 -- Date: 2016-12-15
 
@@ -19,8 +19,8 @@ function FixedArray:New(nFixedLength, o)
 	setmetatable(o, self)
 	self.__index = self
 
-	self._tList = tList or {}
-	self._nLength = nFixedLength or 1
+	o._tList = tList or {}
+	o._nLength = nFixedLength or 1
 
 	return o
 end
@@ -82,6 +82,10 @@ function FixedArray:GetFromIndex(index)
 	else
 		-- Nothing exists at this index.
 	end
+end
+
+function FixedArray:GetLength()
+	return self._nLength
 end
 
 function FixedArray:Resize(nNewLength)
