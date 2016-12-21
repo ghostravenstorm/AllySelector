@@ -1,4 +1,4 @@
-# Program: AllySelector 1.7.1
+# Program: AllySelector 1.7.0
 ### Author: GhostRavenstorm
 ### Date: 2016-12-21
 
