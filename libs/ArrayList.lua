@@ -40,7 +40,7 @@ end
 function ArrayList:Add(item, index)
    -- Add non-duplicate to the end of the list.
 
-	index = index or 1
+	index = index or 0
 
    if not self:_IsDuplicate(item) then
    	if not self._tList[index] then

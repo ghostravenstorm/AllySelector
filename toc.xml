@@ -5,6 +5,7 @@
     <Script Name="libs\FixedArray.lua"/>
     <Script Name="libs\WildstarObjectArrayList.lua"/>
     <Script Name="libs\WildstarUnitArrayList.lua"/>
+    <Script Name="StickynoteModule.lua"/>
     <Script Name="AllySelector.lua"/>
     <Form Name="AllySelector.xml"/>
 </Addon>

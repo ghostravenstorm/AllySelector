@@ -3,7 +3,7 @@
 -- Author: GhostRavenstorm
 -- Date: 2016-12-21
 
--- Description: Place for holding useful functions and etc.
+-- Description: Place for holding useful global functions and etc.
 --------------------------------------------------------------------------------
 
 enumKeys = {

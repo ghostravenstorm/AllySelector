@@ -234,7 +234,7 @@ function WildstarObjectArrayList:GetIndexOfObject(object, index)
 end
 
 function WildstarObjectArrayList:GetLength()
-   return self._nLength
+	return self._nLength
 end
 
 function WildstarObjectArrayList:Purge()
