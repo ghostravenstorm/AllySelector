@@ -1,22 +1,13 @@
 --------------------------------------------------------------------------------
--- Program: AllySelector 1.7.1
+-- Program: AllySelector 1.7.2
 -- Author: GhostRavenstorm
--- Date: 2016-12-21
+-- Date: 2016-12-23
 
 -- Description: Addon for Wildstar designed to algorithmically select and cycle
 -- through a list of priority allies in need of assitance based on health
 -- percentages and buffs.
 --------------------------------------------------------------------------------
---------------------------------------------------------------------------------
--- Datatype prefixes
---   n     = number
---   b     = boolean
---   t     = table
---   str   = string
---   f     = function
---   unit  = Unit
---   list  = ArrayList
---------------------------------------------------------------------------------
+
 
 require "Window"
 
@@ -42,10 +33,10 @@ function AllySelector:New(o)
 	o.nDefaultRange = 35
 
 	o.nSelection = 0
-	o.bUseSmartSelection = false
+	o.bUseSmartSelection = true
 	o.bUseBolsterFilter = false
-	o.bUsePvpFilter = false
-	o.bSelectOnMouseButton = false
+	o.bUsePvpFilter = true
+	o.bSelectOnMouseButton = true
 	o.bSelectOnMouseEnter = false
 
 	--o.tTargetBookmarks = {}
@@ -79,16 +70,51 @@ function AllySelector:OnLoad()
 	--Apollo.RegisterSlashCommand("as-undo", "UndoLastBookmark", self)
 	Apollo.RegisterEventHandler("UnitCreated", "OnUnitCreated", self)
 	Apollo.RegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
-	self:ResetKeyDownEventHandlers()
-
-
-end
-
-function AllySelector:ResetKeyDownEventHandlers()
 	Apollo.RegisterEventHandler("SystemKeyDown", "OnKeyDown", self)
-	--Apollo.RegisterEventHandler("SystemKeyDown", "SelectBookmark", self)
 	Apollo.RegisterEventHandler("SystemKeyDown", "Debug", self)
+
 end
+
+function AllySelector:OnSave(eLevel)
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
+		if DEBUG then Print("Data saved.") end
+		return {
+			bUseSmartSelection = self.bUseSmartSelection,
+			bUseBolsterFilter = self.bUseBolsterFilter,
+			bUsePvpFilter = self.bUsePvpFilter,
+			bSelectOnMouseButton = self.bSelectOnMouseButton,
+			bSelectOnMouseEnter = self.bSelectOnMouseEnter
+		}
+	end
+
+	-- TODO: Save unit name of each bookmark.
+	-- if eLevel == GameLib.CodeEnumAddonSaveLevel.Character then
+	-- 	return self.listBookmarks
+	-- end
+end
+
+function AllySelector:OnRestore(eLevel, tData)
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
+		if tData then
+			self.bUseSmartSelection = tData.bUseSmartSelection
+			self.bUseBolsterFilter = tData.bUseBolsterFilter
+			self.bUsePvpFilter = tData.bUsePvpFilter
+			self.bSelectOnMouseButton = tData.bSelectOnMouseButton
+			self.bSelectOnMouseEnter = tData.bSelectOnMouseEnter
+
+			--self.wndOptions:FindChild("EnableSmartSelectionBtn"):SetCheck(self.bUseSmartSelection)
+			--self.wndOptions:FindChild("EnablePvpFilterBtn"):SetCheck(self.bUseSmartSelection)
+			--self.wndOptions:FindChild("MouseClickBtn"):SetCheck(self.bSelectOnMouseButton)
+		end
+	end
+
+	-- TODO: Take the saved names and search listAlliesInRegion for matches.
+	--       If a match is found, make a new bookmark.
+	-- if eLevel == GameLib.CodeEnumAddonSaveLevel.Character then
+	-- 	if tData then self.listBookmarks = tData end
+	-- end
+end
+
 
 function AllySelector:OnDocLoaded()
 	if self.xmlDoc ~= nil and self.xmlDoc:IsLoaded() then
@@ -103,13 +129,11 @@ function AllySelector:OnDocLoaded()
 		 self.wndOptions:Show(false, true)
 	 end
 
-	 -- Set up default options.
- 	self.bUseSmartSelection = true
-	self.bUsePvpFilter = true
-	self.bSelectOnMouseButton = true
-	self.wndOptions:FindChild("EnableSmartSelectionBtn"):SetCheck(self.bUseSmartSelection)
-	self.wndOptions:FindChild("EnablePvpFilterBtn"):SetCheck(self.bUseSmartSelection)
-	self.wndOptions:FindChild("MouseClickBtn"):SetCheck(self.bSelectOnMouseButton)
+	 self.wndOptions:FindChild("EnableSmartSelectionBtn"):SetCheck(self.bUseSmartSelection)
+	 self.wndOptions:FindChild("EnablePvpFilterBtn"):SetCheck(self.bUsePvpFilter)
+	 self.wndOptions:FindChild("EnableBolsterFilterBtn"):SetCheck(self.bUseBolsterFilter)
+    self.wndOptions:FindChild("MouseClickBtn"):SetCheck(self.bSelectOnMouseButton)
+	 self.wndOptions:FindChild("MouseEnterBtn"):SetCheck(self.bSelectOnMouseEnter)
 
  end
 
@@ -710,7 +734,6 @@ function AllySelector:OnBookmarkProjectBtn(wndHandler)
 	end
 end
 
--- TODO: Move window spawn to center of screen.
 function AllySelector:OnOptionsBtn()
 
 	self.wndOptions:Invoke()
@@ -721,6 +744,12 @@ function AllySelector:OnOptionsBtn()
 		self.wndOptions:GetWidth(),
 		self.wndOptions:GetHeight()
 	)
+
+	if DEBUG then Print("Smart selection: " .. tostring(self.bUseSmartSelection)) end
+	if DEBUG then Print("PvP filter: " .. tostring(self.bUsePvpFilter)) end
+	if DEBUG then Print("Bolster filter: " .. tostring(self.bUseBolsterFilter)) end
+	if DEBUG then Print("Mouse button: " .. tostring(self.bSelectOnMouseButton)) end
+	if DEBUG then Print("Mouse enter: " .. tostring(self.bSelectOnMouseEnter)) end
 end
 
 function AllySelector:OnSmartSelectionCheck(wndHandler)

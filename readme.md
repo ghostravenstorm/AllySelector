@@ -1,6 +1,6 @@
-#### Program: AllySelector 1.7.1
+#### Program: AllySelector 1.7.2
 #### Author: GhostRavenstorm
-#### Date: 2016-12-21
+#### Date: 2016-12-23
 
 ---
 
@@ -38,6 +38,9 @@
 
 
 ### Change Log
+
+#### 1.7.2
+   - Prefs save and load back in between sessions and reload.
 
 #### 1.7.1
    - Added stickynote windows for bookmarks

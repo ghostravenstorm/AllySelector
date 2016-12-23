@@ -19,8 +19,8 @@ function ArrayList:New(o)
 	setmetatable(o, self)
 	self.__index = self
 
-	o._tList = tList or {}
-	o._nLength = nLength or 0
+	o._tList = {}
+	o._nLength = 0
 
 	return o
 end
@@ -198,6 +198,10 @@ end
 
 function ArrayList:GetLength()
    return self._nLength
+end
+
+function ArrayList:GetTable()
+	return self._nList
 end
 
 function ArrayList:Purge()
