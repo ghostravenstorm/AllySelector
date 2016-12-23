@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Addon Author="GhostRavenstorm" APIVersion="14" Name="AllySelector" Description="">
+<Addon Author="GhostRavenstorm" APIVersion="14" Name="AllySelector" Description="" Version="1.7.2">
+    <Script Name="libs\OmniCore.lua"/>
+    <Script Name="libs\ArrayList.lua"/>
+    <Script Name="libs\FixedArray.lua"/>
+    <Script Name="libs\WildstarObjectArrayList.lua"/>
+    <Script Name="libs\WildstarUnitArrayList.lua"/>
+    <Script Name="StickynoteModule.lua"/>
     <Script Name="AllySelector.lua"/>
-    <!-- <Form Name="Thing.xml"/> -->
+    <Form Name="AllySelector.xml"/>
 </Addon>
