@@ -20,8 +20,9 @@ local FixedArray = Apollo.GetPackage("Lib:FixedArray").tPackage
 local WildstarObjectArrayList = Apollo.GetPackage("Lib:WildstarObjectArrayList").tPackage
 local WildstarUnitArrayList = Apollo.GetPackage("Lib:WildstarUnitArrayList").tPackage
 local Stickynote = Apollo.GetPackage("Mod:Stickynote").tPackage
+local Bookmark = Apollo.GetPackage("Mod:Bookmark").tPackage
 
-local DEBUG = true
+local DEBUG = false
 
 -- New instance of Selector
 function AllySelector:New(o)
@@ -46,7 +47,12 @@ function AllySelector:New(o)
 
 	-- This list also contains enemy faction players.
 	o.listAlliesInRegion = WildstarUnitArrayList:New()
-	o.listBookmarks = WildstarObjectArrayList:New()
+	--o.listBookmarks = WildstarObjectArrayList:New()
+	o.listBookmarks = ArrayList:New()
+
+	-- Placeholder for loading in saved bookmarks.
+	o.listNamesCached = ArrayList:New()
+	o.listCachedBookmarks = ArrayList:New()
 
 	return o
 end
@@ -63,11 +69,7 @@ function AllySelector:OnLoad()
 	self.xmlDoc = XmlDoc.CreateFromFile("AllySelector.xml")
 	self.xmlDoc:RegisterCallback("OnDocLoaded", self)
 
-	--Apollo.RegisterSlashCommand("as-setkey", "TraceKey", self)
 	Apollo.RegisterSlashCommand("as", "OnBookmarkManager", self)
-	--Apollo.RegisterSlashCommand("as-setbm", "SetBookmark", self)
-	--Apollo.RegisterSlashCommand("as-clear", "ClearBookmarks", self)
-	--Apollo.RegisterSlashCommand("as-undo", "UndoLastBookmark", self)
 	Apollo.RegisterEventHandler("UnitCreated", "OnUnitCreated", self)
 	Apollo.RegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
 	Apollo.RegisterEventHandler("SystemKeyDown", "OnKeyDown", self)
@@ -75,45 +77,90 @@ function AllySelector:OnLoad()
 
 end
 
-function AllySelector:OnSave(eLevel)
-	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
-		if DEBUG then Print("Data saved.") end
-		return {
-			bUseSmartSelection = self.bUseSmartSelection,
-			bUseBolsterFilter = self.bUseBolsterFilter,
-			bUsePvpFilter = self.bUsePvpFilter,
-			bSelectOnMouseButton = self.bSelectOnMouseButton,
-			bSelectOnMouseEnter = self.bSelectOnMouseEnter
-		}
-	end
 
-	-- TODO: Save unit name of each bookmark.
-	-- if eLevel == GameLib.CodeEnumAddonSaveLevel.Character then
-	-- 	return self.listBookmarks
-	-- end
-end
-
-function AllySelector:OnRestore(eLevel, tData)
-	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
-		if tData then
-			self.bUseSmartSelection = tData.bUseSmartSelection
-			self.bUseBolsterFilter = tData.bUseBolsterFilter
-			self.bUsePvpFilter = tData.bUsePvpFilter
-			self.bSelectOnMouseButton = tData.bSelectOnMouseButton
-			self.bSelectOnMouseEnter = tData.bSelectOnMouseEnter
-
-			--self.wndOptions:FindChild("EnableSmartSelectionBtn"):SetCheck(self.bUseSmartSelection)
-			--self.wndOptions:FindChild("EnablePvpFilterBtn"):SetCheck(self.bUseSmartSelection)
-			--self.wndOptions:FindChild("MouseClickBtn"):SetCheck(self.bSelectOnMouseButton)
-		end
-	end
-
-	-- TODO: Take the saved names and search listAlliesInRegion for matches.
-	--       If a match is found, make a new bookmark.
-	-- if eLevel == GameLib.CodeEnumAddonSaveLevel.Character then
-	-- 	if tData then self.listBookmarks = tData end
-	-- end
-end
+-- function AllySelector:OnSave(eLevel)
+--
+-- 	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
+-- 		return {
+-- 			bUseSmartSelection = self.bUseSmartSelection,
+-- 			bUseBolsterFilter = self.bUseBolsterFilter,
+-- 			bUsePvpFilter = self.bUsePvpFilter,
+-- 			bSelectOnMouseButton = self.bSelectOnMouseButton,
+-- 			bSelectOnMouseEnter = self.bSelectOnMouseEnter
+-- 		}
+-- 	end
+--
+-- 	-- local function GetBookmarkNames(listNames, index)
+-- 	--
+-- 	-- 	if index > self.listBookmarks:GetLength() then
+-- 	-- 		if DEBUG then Print("Names returned.") end
+-- 	-- 		return listNames
+-- 	-- 	else
+-- 	-- 		local data = self.listBookmarks:GetFromIndex(index):GetData()
+-- 	-- 		if data.unit then
+-- 	-- 			if DEBUG then Print("Name added.") end
+-- 	-- 			listNames:AddDuplicate(data.unit:GetName())
+-- 	-- 		end
+-- 	-- 		return GetBookmarkNames(listNames, index + 1)
+-- 	-- 	end
+-- 	-- end
+--
+-- 	local function GetBookmarkData(listData, index)
+--
+-- 		if index > self.listBookmarks:GetLength() then
+-- 			return listData
+-- 		else
+-- 			local data = self.listBookmarks:GetFromIndex(index):GetData()
+-- 			if data.unit then
+--
+-- 				local CheckStickynote = function(stickynote)
+-- 						if stickynote then return true
+-- 						else return false
+-- 						end
+-- 					end
+--
+-- 				local cachedData = {
+-- 					strName = data.unit:GetName(),
+-- 					nKeybind = data.keybind,
+-- 					bHasStickynote = CheckStickynote(data.stickynote)
+-- 				}
+--
+-- 				listData:AddDuplicate(cachedData)
+-- 			end
+--
+-- 			return GetBookmarkData(listData, index + 1)
+-- 		end
+-- 	end
+--
+-- 	if eLevel == GameLib.CodeEnumAddonSaveLevel.Character then
+-- 		if self.listBookmarks:GetLength() == 0 then
+-- 			if DEBUG then Print("No bookmarks to save.") end
+-- 			return {}
+-- 		else
+-- 			return {listData = GetBookmarkData(ArrayList:New(), 1):ConvertToTable()}
+-- 		end
+-- 	end
+--
+-- end
+--
+-- function AllySelector:OnRestore(eLevel, tData)
+--
+-- 	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
+--
+-- 		if tData then
+-- 			self.bUseSmartSelection = tData.bUseSmartSelection
+-- 			self.bUseBolsterFilter = tData.bUseBolsterFilter
+-- 			self.bUsePvpFilter = tData.bUsePvpFilter
+-- 			self.bSelectOnMouseButton = tData.bSelectOnMouseButton
+-- 			self.bSelectOnMouseEnter = tData.bSelectOnMouseEnter
+-- 		end
+-- 	end
+--
+-- 	if eLevel == GameLib.CodeEnumAddonSaveLevel.Character then
+-- 		--self.listNamesCached = ArrayList:New(tData.listNames)
+-- 		self.listCachedBookmarks = ArrayList:New(tData.listData)
+-- 	end
+-- end
 
 
 function AllySelector:OnDocLoaded()
@@ -127,14 +174,20 @@ function AllySelector:OnDocLoaded()
 
 	    self.wndMain:Show(false, true)
 		 self.wndOptions:Show(false, true)
+
+		 self.wndOptions:FindChild("EnableSmartSelectionBtn"):SetCheck(self.bUseSmartSelection)
+		 self.wndOptions:FindChild("EnablePvpFilterBtn"):SetCheck(self.bUsePvpFilter)
+		 self.wndOptions:FindChild("EnableBolsterFilterBtn"):SetCheck(self.bUseBolsterFilter)
+		 self.wndOptions:FindChild("MouseClickBtn"):SetCheck(self.bSelectOnMouseButton)
+		 self.wndOptions:FindChild("MouseEnterBtn"):SetCheck(self.bSelectOnMouseEnter)
+
+		 -- Construct new bookmarks based on the cached data.
+		--  if self.listNamesCached:GetLength() > 0 then
+		-- 	 self:ConstructCachedBookmarks(1, 1)
+		--  end
+
+
 	 end
-
-	 self.wndOptions:FindChild("EnableSmartSelectionBtn"):SetCheck(self.bUseSmartSelection)
-	 self.wndOptions:FindChild("EnablePvpFilterBtn"):SetCheck(self.bUsePvpFilter)
-	 self.wndOptions:FindChild("EnableBolsterFilterBtn"):SetCheck(self.bUseBolsterFilter)
-    self.wndOptions:FindChild("MouseClickBtn"):SetCheck(self.bSelectOnMouseButton)
-	 self.wndOptions:FindChild("MouseEnterBtn"):SetCheck(self.bSelectOnMouseEnter)
-
  end
 
 -- Debug code.
@@ -162,6 +215,12 @@ function AllySelector:Debug(nKeyCode)
 			Print(tostring(i) .. ": " .. thing:GetName() .. ": " .. tostring(thing:GetData().index))
 		end
 	end
+
+	if DEBUG and nKeyCode == 84 then
+
+		self.listNamesCached:Print()
+
+	end
 end
 
 function AllySelector:OnBookmarkManager()
@@ -170,54 +229,58 @@ end
 
 function AllySelector:OnKeyDown(nKeycode)
 
-	local function CheckBookmarkKeybinds(index)
-		-- Recursively check if the key pressed matches a keybind for any of the
-		-- bookmarks.
+	-- Moved to Bookmark class.
+	-- local function CheckBookmarkKeybinds(index)
+	-- 	-- Recursively check if the key pressed matches a keybind for any of the
+	-- 	-- bookmarks.
+	--
+	-- 	if index > self.listBookmarks:GetLength() then
+	-- 		return
+	-- 	else
+	-- 		if nKeycode == self.listBookmarks:GetFromIndex(index):GetData().keybind then
+	--
+	-- 			-- Moved to Bookmark class.
+	-- 			self:SelectBookmark(index)
+	-- 			return
+	-- 		else
+	-- 			return CheckBookmarkKeybinds(index + 1)
+	-- 		end
+	-- 	end
+	-- end
+	--
+	-- CheckBookmarkKeybinds(1)
 
-		if index > self.listBookmarks:GetLength() then
-			return
-		else
-			if nKeycode == self.listBookmarks:GetFromIndex(index):GetData().keybind then
-				self:SelectBookmark(index)
-				return
-			else
-				return CheckBookmarkKeybinds(index + 1)
-			end
-		end
-	end
+	-- Moved to Bookmark class.
+	-- local function SetBookmarkKeybind(index)
+	-- 	-- Recursively check if any bookmark is looking for a new keybind.
+	--
+	-- 	if index > self.listBookmarks:GetLength() then
+	-- 		return
+	-- 	elseif self.listBookmarks:GetFromIndex(index):GetData().isLookingForKey then
+	-- 		-- If so, set this key as the new keybind for bookmark at index.
+	--
+	-- 		local data = self.listBookmarks:GetFromIndex(index):GetData()
+	-- 		data.keybind = nKeycode
+	-- 		data.isLookingForKey = false
+	-- 		self.listBookmarks:GetFromIndex(index):SetData(data)
+	-- 		self.listBookmarks:GetFromIndex(index):FindChild("KeybindBtn"):SetText(enumKeys[nKeycode])
+	-- 		self.wndMain:FindChild("StatusMsg"):SetText("Keybind set to " .. enumKeys[nKeycode])
+	-- 		return
+	-- 	else
+	-- 		return SetBookmarkKeybind(index + 1)
+	-- 	end
+	-- end
+	--
+	-- SetBookmarkKeybind(1)
 
-	CheckBookmarkKeybinds(1)
-
-	local function SetBookmarkKeybind(index)
-		-- Recursively check if any bookmark is looking for a new keybind.
-
-		if index > self.listBookmarks:GetLength() then
-			return
-		elseif self.listBookmarks:GetFromIndex(index):GetData().isLookingForKey then
-			-- If so, set this key as the new keybind for bookmark at index.
-
-			local data = self.listBookmarks:GetFromIndex(index):GetData()
-			data.keybind = nKeycode
-			data.isLookingForKey = false
-			self.listBookmarks:GetFromIndex(index):SetData(data)
-			self.listBookmarks:GetFromIndex(index):FindChild("KeybindBtn"):SetText(enumKeys[nKeycode])
-			self.wndMain:FindChild("StatusMsg"):SetText("Keybind set to " .. enumKeys[nKeycode])
-			return
-		else
-			return SetBookmarkKeybind(index + 1)
-		end
-	end
-
-	SetBookmarkKeybind(1)
-
+	-- Moved to Bookmark class.
 	-- Select an ally if the tab key is pressed.
-	if enumKeys[nKeycode] == "tab" then
-		-- If smart selection if turned on.
-		if self.bUseSmartSelection then
-			self:SelectAlly()
-		end
-	end
-
+	-- if enumKeys[nKeycode] == "tab" then
+	-- 	-- If smart selection if turned on.
+	-- 	if self.bUseSmartSelection then
+	-- 		self:SelectAlly()
+	-- 	end
+	-- end
 end
 
 -- function AllySelector:TraceKey()
@@ -271,14 +334,20 @@ function AllySelector:SelectAlly()
 	-- if self:GetBookmarkPriority() then
 	-- 	unitNextTarget = self:GetBookmarkPriority()
 	-- else
+
+	-- Check if the first unit in the list has taken damage.
 	if self:GetHealthPercent(self.listAlliesInRegion:GetFromIndex(1)) ~= 1 then
 		-- Get lowest health ally assuming the list is already sorted by lowest health.
+		-- Passing in 1 to start at the beginning of the list.
 		--unitNextTarget = self:GetLowestHealthAllyInRange()
 		unitNextTarget = self:GetNextAlly(1)
 	else
-		-- If the first unit in the list is at 100%, then get next unit in selection order.
+		-- If the first unit in the list is at 100%, then get next unit in order.
 		--unitNextTarget = self:GetAllyInRange(self.nSelection)
 		unitNextTarget = self:GetNextAlly(self.nSelection + 1)
+		-- NOTE: nSeletion saves the last unit that was selected when GetNextAlly
+		--       is called. When passed in in this case with +1, the next ally in
+		--       the list order will be selected.
 	end
 	-- end
 
@@ -299,6 +368,7 @@ function AllySelector:SelectAlly()
 	end
 end
 
+-- Condensed into GetNextAlly
 -- function AllySelector:GetAllyInRange(nIndex)
 -- 	-- Return the next unit in the list that passes these checks.
 --
@@ -351,6 +421,7 @@ end
 -- 	end
 -- end
 
+-- Condensed into GetNextAlly
 -- function AllySelector:GetLowestHealthAllyInRange(nIndex)
 -- 	-- Get next ally from list assuming the list is already sorted by lowest health.
 -- 	-- This algorithm starts from the beginning of the list and returns the frist unit
@@ -398,14 +469,28 @@ end
 -- 	end
 -- end
 
+-- Select ally in range based on enabled filters and order in list.
 function AllySelector:GetNextAlly(nIndex)
+	-- NOTE: This method assumes listAlliesInRegion is sorted by lowest health.
+	--       When 1 is passed in as the starting index for this recursive
+	--       search, it will return the first unit in the list. If that unit is
+	--       not valid for selection based on the following condition, then Move
+	--       on to the next unit in order.
 
 	nIndex = nIndex or 1
 
 	if nIndex > self.listAlliesInRegion:GetLength() then
+		-- When the end of the list is reached, reset nSelection to 1, and return
+		-- the first unit in the list.
+
+		-- TODO: Remember what nSelection was when it was first passed in and don't
+	   --       break until that value is reached again. Rollover to the beginning
+		--       when end of list is reached.
+
 		self.nSelection = 1
 		local unit = self.listAlliesInRegion:GetFromIndex(1)
 		if DEBUG then Print(tostring(1) .. ": " .. unit:GetName() .. " selected.") end
+
 		return self.listAlliesInRegion:GetFromIndex(1)
 	end
 
@@ -429,7 +514,7 @@ function AllySelector:GetNextAlly(nIndex)
 		return self:GetNextAlly(nIndex + 1)
 
 	elseif not self:IsSamePvpState(unit) then
-		if DEBUG then Print(tostring(nIndex) .. ": " .. unit:GetName() .. " is same PvP state or filter is off.") end
+		if DEBUG then Print(tostring(nIndex) .. ": " .. unit:GetName() .. " is same PvP state.") end
 		return self:GetNextAlly(nIndex + 1)
 
 	elseif unit:IsDead() then
@@ -437,7 +522,7 @@ function AllySelector:GetNextAlly(nIndex)
 		return self:GetNextAlly(nIndex + 1)
 
 	elseif self:HasBolster(unit) then
-		if DEBUG then Print(tostring(nIndex) .. ": " .. unit:GetName() .. " already has Bolster or filter is off.") end
+		if DEBUG then Print(tostring(nIndex) .. ": " .. unit:GetName() .. " already has Bolster.") end
 		return self:GetNextAlly(nIndex + 1)
 
 	else
@@ -481,8 +566,7 @@ function AllySelector:IsBookmarkAtThreashold(bookmark)
 	end
 end
 
--- Obsolete. Get lowest health ally from an unsorted list.
--- Keeping for example purposes.
+-- Recursively get lowest health ally from an unsorted list. Keep for reference.
 -- function AllySelector:GetLowestHealthAllyInRange(nIteration, unitLowest)
 --
 -- 	--if nIteration > self.nAlliesInRegion then
@@ -588,32 +672,61 @@ end
 -- GUI Event Handlers
 --------------------------------------------------------------------------------
 
+-- NEW
+function AllySelector:OnBookmarkDestroyed(oBookmark)
+	-- Remove bookmark triggered by this event from the list and reset the indicies
+	-- all all the remining bookmarks listed after the one given.
+
+	-- Recursively get every bookmark starting from the one being removed.
+	local function ResetIndicies(index)
+		if index > self.listBookmarks:GetLength() then
+			return
+		else
+			-- Reduce the index value of this bookmark by 1.
+			self.listBookmarks:GetFromIndex(index):SetIndex(index - 1)
+			return ResetIndicies(index + 1)
+		end
+	end
+
+	-- Reset the index value of every bookmark in order listed after this one.
+	ResetIndicies(oBookmark.nIndex + 1)
+
+	self.listBookmarks:Remove(oBookmark)
+	self.wndMain:FindChild("Bookmarks"):ArrangeChildrenVert()
+end
+
 function AllySelector:OnCloseBtn(wndHandler)
 	-- Close the parent window.
 	wndHandler:GetParent():Close()
 end
 
+-- TODO: Remake to invoke Bookmark class. Done.
 -- TODO: Condense line length of this code.
 function AllySelector:OnNewBookmarkBtn(wndHandler)
 	-- Create a new bookmark node.
 
-	local bookmark = Apollo.LoadForm(self.xmlDoc, "BookmarkModule", self.wndMain:FindChild("Bookmarks"), self)
+	--local bookmark = Apollo.LoadForm(self.xmlDoc, "BookmarkModule", self.wndMain:FindChild("Bookmarks"), self)
+	local bookmark = Bookmark:New(self, self.listBookmarks:GetLength() + 1)
 
 	-- NOTE: Bookmark data is set to the absolute root of the bookmark module.
 
 	-- Add the new bookmark to the list and set its data.
 	self.listBookmarks:Add(bookmark)
-	--self.listBookmarks:GetLast():SetData({unit = nil, index = self.listBookmarks:GetIndexOfObject(bookmark), keybind = nil, isLookingForKey = false})
-	self.listBookmarks:GetLast():SetData({index = self.listBookmarks:GetIndexOfObject(bookmark)})
+	--self.listBookmarks:GetLast().nIndex = self.listBookmarks:GetIndexOfObject(bookmark)
+	--self.listBookmarks:GetLast():SetData({index = self.listBookmarks:GetIndexOfObject(bookmark)}
+	if DEBUG then self.listBookmarks:Print() end
 
-	-- Arrange bookmarks to prevent overlap.
 	self.wndMain:FindChild("Bookmarks"):ArrangeChildrenVert()
 
-	-- Print status message and set bookmark node's number.
-	self.wndMain:FindChild("StatusMsg"):SetText("Bookmark node " .. tostring(bookmark:GetId()) .. " created.")
-	self.listBookmarks:GetLast():FindChild("NumberSocket"):SetText(tostring(self.listBookmarks:GetIndexOfObject(bookmark)))
+	-- Moved to Bookmark class.
+	-- -- Arrange bookmarks to prevent overlap.
+	-- self.wndMain:FindChild("Bookmarks"):ArrangeChildrenVert()
+	-- -- Print status message and set bookmark node's number.
+	-- self.wndMain:FindChild("StatusMsg"):SetText("Bookmark node " .. tostring(bookmark:GetId()) .. " created.")
+	-- self.listBookmarks:GetLast():FindChild("NumberSocket"):SetText(tostring(self.listBookmarks:GetIndexOfObject(bookmark)))
 end
 
+-- Moved to Bookmark class.
 function AllySelector:OnBookmarkSetBtn(wndHandler)
 	-- Set the player's current target to the bookmark of this button event.
 
@@ -632,6 +745,7 @@ function AllySelector:OnBookmarkSetBtn(wndHandler)
 				data.unit = unit
 				if data.stickynote then
 					data.stickynote:Kill()
+					-- TODO: Abstract stickynote builder to another function.
 					self:OnBookmarkProjectBtn(wndHandler)
 				end
 				wndHandler:GetParent():SetData(data)
@@ -653,6 +767,7 @@ function AllySelector:OnBookmarkSetBtn(wndHandler)
 	end
 end
 
+-- Moved to Bookmark class.
 function AllySelector:OnBookmarkClearBtn(wndHandler)
 	-- Clear the name field and remove unit refernece from the bookmark of this button.
 
@@ -666,8 +781,12 @@ function AllySelector:OnBookmarkClearBtn(wndHandler)
 	data.stickynote = nil
 	wndHandler:GetParent():FindChild("KeybindBtn"):SetText("No Keybind")
 	wndHandler:GetParent():SetData(data)
+
+	local msg = "Bookmark " .. tostring(data.index) .. " cleared."
+	self.wndMain:FindChild("StatusMsg"):SetText(msg)
 end
 
+-- Moved to Bookmark class.
 function AllySelector:OnBookmarkKeybindBtn(wndHandler)
 	-- Set keybind to the next key that is press for the bookmark of this button.
 
@@ -680,6 +799,7 @@ function AllySelector:OnBookmarkKeybindBtn(wndHandler)
 	self.wndMain:FindChild("StatusMsg"):SetText("Press any key to set a keybind.")
 end
 
+-- Moved to self:OnBookmarkDestroyed.
 -- TODO: Condense line length of this code.
 function AllySelector:OnBookmarkDeleteBtn(wndHandler)
 	-- Destroy the bookmark node of this button.
@@ -715,6 +835,7 @@ function AllySelector:OnBookmarkDeleteBtn(wndHandler)
 	ResetIndicies(1)
 end
 
+-- TODO: Check if unit is still valid.
 function AllySelector:OnBookmarkProjectBtn(wndHandler)
 
 	if wndHandler:GetParent():GetData().unit then
@@ -745,11 +866,11 @@ function AllySelector:OnOptionsBtn()
 		self.wndOptions:GetHeight()
 	)
 
-	if DEBUG then Print("Smart selection: " .. tostring(self.bUseSmartSelection)) end
-	if DEBUG then Print("PvP filter: " .. tostring(self.bUsePvpFilter)) end
-	if DEBUG then Print("Bolster filter: " .. tostring(self.bUseBolsterFilter)) end
-	if DEBUG then Print("Mouse button: " .. tostring(self.bSelectOnMouseButton)) end
-	if DEBUG then Print("Mouse enter: " .. tostring(self.bSelectOnMouseEnter)) end
+	-- if DEBUG then Print("Smart selection: " .. tostring(self.bUseSmartSelection)) end
+	-- if DEBUG then Print("PvP filter: " .. tostring(self.bUsePvpFilter)) end
+	-- if DEBUG then Print("Bolster filter: " .. tostring(self.bUseBolsterFilter)) end
+	-- if DEBUG then Print("Mouse button: " .. tostring(self.bSelectOnMouseButton)) end
+	-- if DEBUG then Print("Mouse enter: " .. tostring(self.bSelectOnMouseEnter)) end
 end
 
 function AllySelector:OnSmartSelectionCheck(wndHandler)
@@ -800,13 +921,13 @@ function AllySelector:ResetStickynoteSelectionMethods(index)
 	if index > self.listBookmarks:GetLength() then
 		return
 	else
-		local data = self.listBookmarks:GetFromIndex(index):GetData()
-		if data.stickynote then
+		local stickynote = self.listBookmarks:GetFromIndex(index).stickynote
+		if stickynote then
 			local tOptions = {
 				bSelectOnMouseEnter = self.bSelectOnMouseEnter,
 				bSelectOnMouseButton = self.bSelectOnMouseButton
 			}
-			data.stickynote:SetSelectionMethod(tOptions)
+			stickynote:SetSelectionMethod(tOptions)
 		end
 		self:ResetStickynoteSelectionMethods(index + 1)
 	end
@@ -817,6 +938,7 @@ end
 -- Bookmarking System
 --------------------------------------------------------------------------------
 
+-- Moved to Bookmark class as OnKeybindPressed.
 function AllySelector:SelectBookmark(nIndex)
 	-- Select the unit of the bookmark at index in the list.
 
@@ -837,6 +959,53 @@ function AllySelector:SelectBookmark(nIndex)
 		-- Nothing exists in this slot.
 		self.wndMain:FindChild("StatusMsg"):SetText("Selection Error: Nothing is assigned to bookmark " .. tostring(nIndex))
 	end
+end
+
+-- function AllySelector:ConstructCachedBookmarks(nCacheIndex, nUnitIndex)
+--
+-- 	local strNameToMatch = self.listCachedBookmarks:GetFromIndex(nCacheIndex).strName
+-- 	local strUnitBeingMatch = self.listAlliesInRegion:GetFromIndex(nUnitIndex):GetName()
+--
+-- 	if nCacheIndex > self.listNamesCached:GetLength() then
+-- 		self.wndMain:FindChild("Bookmarks"):ArrangeChildrenVert()
+-- 		return
+-- 	else
+-- 		if nUnitIndex > self.listAlliesInRegion:GetLength() then
+-- 			return MatchName(nCacheIndex + 1, 1)
+--
+-- 		elseif strNameToMatch == strUnitBeingMatch then
+-- 			-- Construct bookmark for unit.
+--
+-- 			local unit = self.listAlliesInRegion:GetFromIndex(nUnitIndex)
+--
+-- 			local bookmark = Apollo.LoadForm(self.xmlDoc, "BookmarkModule", self.wndMain:FindChild("Bookmarks"), self)
+-- 			bookmark:FindChild("Name"):SetText(unit:GetName())
+--
+-- 			self.listBookmarks:Add(bookmark)
+--
+-- 			local data = {
+-- 				unit = unit,
+-- 				index = self.listBookmarks:GetIndexOfObject(bookmark),
+-- 				keybind = self.listCachedBookmarks:GetFromIndex(nCacheIndex).keybind,
+-- 				stickynote = self:ConstructStickynote(data)
+-- 			}
+-- 			self.listBookmarks:GetLast():SetData(data)
+--
+-- 			return MatchName(nCacheIndex, nUnitIndex + 1)
+--
+-- 		else
+-- 			return MatchName(nCacheIndex, nUnitIndex + 1)
+--
+-- 		end
+-- 	end
+-- end
+
+function AllySelector:ConstructStickynote(data)
+	local tOptions = {
+		bSelectOnMouseEnter = self.bSelectOnMouseEnter,
+		bSelectOnMouseButton = self.bSelectOnMouseButton
+	}
+	return Stickynote:New(data, tOptions, self.xmlDoc)
 end
 
 -- function AllySelector:SetAlly(wndHandler, wndControl, eMouseButton)

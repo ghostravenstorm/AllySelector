@@ -1,5 +1,5 @@
 -----------------------------------
--- Program: WildstarObjectArrayList 1.0.2
+-- Program: WildstarObjectArrayList 1.0.3
 -- Author: GhostRavenstorm
 -- Date: 2016-12-18
 
@@ -22,8 +22,8 @@ function WildstarObjectArrayList:New(o)
 	setmetatable(o, self)
 	self.__index = self
 
-	o._tList = tList or {}
-	o._nLength = nLength or 0
+	o._tList = {}
+	o._nLength = 0
 
 	return o
 end
@@ -181,7 +181,7 @@ end
 -- end
 
 function WildstarObjectArrayList:Get(object, index)
-   -- Return first occurance of object in the list.
+   -- Return first occurance of object in the list by id.
 
    index = index or 1
 
@@ -196,6 +196,24 @@ function WildstarObjectArrayList:Get(object, index)
       return self:Get(object, index + 1)
    end
 end
+
+function WildstarObjectArrayList:GetByName(object, index)
+   -- Return first occurance of object in the list by name.
+
+   index = index or 1
+
+   if index > self._nLength then
+      -- The given object doesn't exist in this list.
+      return "The given object doesn't exist."
+   elseif object:GetName() == self._tList[index]:GetName() then
+      -- Match found at this index.
+      return self._tList[index]
+   else
+      -- Check next object.
+      return self:Get(object, index + 1)
+   end
+end
+
 
 function WildstarObjectArrayList:GetLast()
    if self._nLength ~= 0 then
