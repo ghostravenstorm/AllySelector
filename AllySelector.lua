@@ -22,9 +22,8 @@ local WildstarUnitArrayList = Apollo.GetPackage("Lib:WildstarUnitArrayList").tPa
 local Stickynote = Apollo.GetPackage("Mod:Stickynote").tPackage
 local Bookmark = Apollo.GetPackage("Mod:Bookmark").tPackage
 
-local DEBUG = false
+local DEBUG = true
 
--- New instance of Selector
 function AllySelector:New(o)
 	o = o or {}
 	setmetatable(o, self)
@@ -32,8 +31,8 @@ function AllySelector:New(o)
 
 	o.nDefaultKey = 9
 	o.nDefaultRange = 35
-
 	o.nSelection = 0
+
 	o.bUseSmartSelection = true
 	o.bUseBolsterFilter = false
 	o.bUsePvpFilter = true
@@ -51,7 +50,7 @@ function AllySelector:New(o)
 	o.listBookmarks = ArrayList:New()
 
 	-- Placeholder for loading in saved bookmarks.
-	o.listNamesCached = ArrayList:New()
+	--o.listNamesCached = ArrayList:New()
 	o.listCachedBookmarks = ArrayList:New()
 
 	return o
@@ -74,93 +73,76 @@ function AllySelector:OnLoad()
 	Apollo.RegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
 	Apollo.RegisterEventHandler("SystemKeyDown", "OnKeyDown", self)
 	Apollo.RegisterEventHandler("SystemKeyDown", "Debug", self)
-
 end
 
 
--- function AllySelector:OnSave(eLevel)
---
--- 	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
--- 		return {
--- 			bUseSmartSelection = self.bUseSmartSelection,
--- 			bUseBolsterFilter = self.bUseBolsterFilter,
--- 			bUsePvpFilter = self.bUsePvpFilter,
--- 			bSelectOnMouseButton = self.bSelectOnMouseButton,
--- 			bSelectOnMouseEnter = self.bSelectOnMouseEnter
--- 		}
--- 	end
---
--- 	-- local function GetBookmarkNames(listNames, index)
--- 	--
--- 	-- 	if index > self.listBookmarks:GetLength() then
--- 	-- 		if DEBUG then Print("Names returned.") end
--- 	-- 		return listNames
--- 	-- 	else
--- 	-- 		local data = self.listBookmarks:GetFromIndex(index):GetData()
--- 	-- 		if data.unit then
--- 	-- 			if DEBUG then Print("Name added.") end
--- 	-- 			listNames:AddDuplicate(data.unit:GetName())
--- 	-- 		end
--- 	-- 		return GetBookmarkNames(listNames, index + 1)
--- 	-- 	end
--- 	-- end
---
--- 	local function GetBookmarkData(listData, index)
---
--- 		if index > self.listBookmarks:GetLength() then
--- 			return listData
--- 		else
--- 			local data = self.listBookmarks:GetFromIndex(index):GetData()
--- 			if data.unit then
---
--- 				local CheckStickynote = function(stickynote)
--- 						if stickynote then return true
--- 						else return false
--- 						end
--- 					end
---
--- 				local cachedData = {
--- 					strName = data.unit:GetName(),
--- 					nKeybind = data.keybind,
--- 					bHasStickynote = CheckStickynote(data.stickynote)
--- 				}
---
--- 				listData:AddDuplicate(cachedData)
--- 			end
---
--- 			return GetBookmarkData(listData, index + 1)
--- 		end
--- 	end
---
--- 	if eLevel == GameLib.CodeEnumAddonSaveLevel.Character then
--- 		if self.listBookmarks:GetLength() == 0 then
--- 			if DEBUG then Print("No bookmarks to save.") end
--- 			return {}
--- 		else
--- 			return {listData = GetBookmarkData(ArrayList:New(), 1):ConvertToTable()}
--- 		end
--- 	end
---
--- end
---
--- function AllySelector:OnRestore(eLevel, tData)
---
--- 	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
---
--- 		if tData then
--- 			self.bUseSmartSelection = tData.bUseSmartSelection
--- 			self.bUseBolsterFilter = tData.bUseBolsterFilter
--- 			self.bUsePvpFilter = tData.bUsePvpFilter
--- 			self.bSelectOnMouseButton = tData.bSelectOnMouseButton
--- 			self.bSelectOnMouseEnter = tData.bSelectOnMouseEnter
--- 		end
--- 	end
---
--- 	if eLevel == GameLib.CodeEnumAddonSaveLevel.Character then
--- 		--self.listNamesCached = ArrayList:New(tData.listNames)
--- 		self.listCachedBookmarks = ArrayList:New(tData.listData)
--- 	end
--- end
+function AllySelector:OnSave(eLevel)
+
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
+		-- Return addon preferences.
+		return {
+			bUseSmartSelection = self.bUseSmartSelection,
+			bUseBolsterFilter = self.bUseBolsterFilter,
+			bUsePvpFilter = self.bUsePvpFilter,
+			bSelectOnMouseButton = self.bSelectOnMouseButton,
+			bSelectOnMouseEnter = self.bSelectOnMouseEnter
+		}
+	end
+
+	-- Rcursive routine for converting bookmarks to standard lua tables.
+	local function SerializeBookmarks(listData, index)
+		if index > self.listBookmarks:GetLength() then
+			return listData
+		else
+			-- Get a standard lua table for each bookmark.
+			local bookmark = self.listBookmarks:GetFromIndex(index):GetSerializedTable()
+
+			-- Add to list if GetSerializedTable returned something.
+			if bookmark then
+				listData:AddDuplicate(bookmark)
+			end
+
+			return SerializeBookmarks(listData, index + 1)
+		end
+	end
+
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Character then
+		if self.listBookmarks:GetLength() == 0 then
+			if DEBUG then Print("No bookmarks to save.") end
+			return {listData = "nothing"}
+		else
+			-- Convert all bookmarks to a stard lua table, add to arraylist, then
+			-- convert arraylist to stard lua table for Wildstar's save routine.
+			return {listData = SerializeBookmarks(ArrayList:New(), 1):GetConvertedTable()}
+		end
+	end
+end
+
+function AllySelector:OnRestore(eLevel, tData)
+
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
+
+		-- Restore addon preferences from last session.
+		if tData then
+			self.bUseSmartSelection = tData.bUseSmartSelection
+			self.bUseBolsterFilter = tData.bUseBolsterFilter
+			self.bUsePvpFilter = tData.bUsePvpFilter
+			self.bSelectOnMouseButton = tData.bSelectOnMouseButton
+			self.bSelectOnMouseEnter = tData.bSelectOnMouseEnter
+		end
+	end
+
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Character then
+
+		-- Restore bookmark data from last session to a temporary location.
+		if type(tData.listData) == "table" then
+			self.listCachedBookmarks = ArrayList:New(tData.listData)
+			-- NOTE: See OnDocLoaded.
+		else
+			if DEBUG then Print("Nothing to restore.") end
+		end
+	end
+end
 
 
 function AllySelector:OnDocLoaded()
@@ -181,14 +163,45 @@ function AllySelector:OnDocLoaded()
 		 self.wndOptions:FindChild("MouseClickBtn"):SetCheck(self.bSelectOnMouseButton)
 		 self.wndOptions:FindChild("MouseEnterBtn"):SetCheck(self.bSelectOnMouseEnter)
 
-		 -- Construct new bookmarks based on the cached data.
-		--  if self.listNamesCached:GetLength() > 0 then
-		-- 	 self:ConstructCachedBookmarks(1, 1)
-		--  end
+		-- Restore bookmark modules for each dataset that has been restored.
+		if self.listCachedBookmarks:GetLength() > 0 then
 
+			-- Recurive routine for restoring the window modules for saved bookmarks.
+			local function RestoreBookmarks(nBookmarkIndex, nUnitIndex)
 
-	 end
- end
+				if nBookmarkIndex > self.listCachedBookmarks:GetLength() then
+					return
+				else
+
+					if nUnitIndex > self.listAlliesInRegion:GetLength() then
+						return RestoreBookmarks(nBookmarkIndex + 1, 1)
+					elseif self.listCachedBookmarks:GetFromIndex(nBookmarkIndex).strUnitName ==
+					       self.listAlliesInRegion:GetFromIndex(nUnitIndex):GetName() then
+						local bookmark = Bookmark:New(
+							self,
+							self.listBookmarks:GetLength() + 1,
+							self.listAlliesInRegion:GetFromIndex(nUnitIndex),
+							self.listCachedBookmarks:GetFromIndex(nBookmarkIndex).nKeybind,
+							self.listCachedBookmarks:GetFromIndex(nBookmarkIndex).bHasStickynote
+						)
+
+						self.listBookmarks:Add(bookmark)
+						self.wndMain:FindChild("Bookmarks"):ArrangeChildrenVert()
+
+						return RestoreBookmarks(nBookmarkIndex + 1, 1)
+					else
+						return RestoreBookmarks(nBookmarkIndex, nUnitIndex + 1)
+					end
+				end
+
+			end -- RestoreBookmarks
+
+			RestoreBookmarks(1, 1)
+
+		end -- if self.listCachedBookmarks:GetLength
+
+	end -- if self.xmlDoc
+end -- DocLoaded
 
 -- Debug code.
 function AllySelector:Debug(nKeyCode)
@@ -218,8 +231,10 @@ function AllySelector:Debug(nKeyCode)
 
 	if DEBUG and nKeyCode == 84 then
 
-		self.listNamesCached:Print()
 
+		local savedData = self:OnSave(GameLib.CodeEnumAddonSaveLevel.Character)
+		self:OnRestore(GameLib.CodeEnumAddonSaveLevel.Character, savedData)
+		self.listCachedBookmarks:Print()
 	end
 end
 
@@ -273,14 +288,13 @@ function AllySelector:OnKeyDown(nKeycode)
 	--
 	-- SetBookmarkKeybind(1)
 
-	-- Moved to Bookmark class.
 	-- Select an ally if the tab key is pressed.
-	-- if enumKeys[nKeycode] == "tab" then
-	-- 	-- If smart selection if turned on.
-	-- 	if self.bUseSmartSelection then
-	-- 		self:SelectAlly()
-	-- 	end
-	-- end
+	if enumKeys[nKeycode] == "tab" then
+		-- If smart selection if turned on.
+		if self.bUseSmartSelection then
+			self:SelectAlly()
+		end
+	end
 end
 
 -- function AllySelector:TraceKey()
@@ -700,7 +714,6 @@ function AllySelector:OnCloseBtn(wndHandler)
 	wndHandler:GetParent():Close()
 end
 
--- TODO: Remake to invoke Bookmark class. Done.
 -- TODO: Condense line length of this code.
 function AllySelector:OnNewBookmarkBtn(wndHandler)
 	-- Create a new bookmark node.
@@ -1000,13 +1013,13 @@ end
 -- 	end
 -- end
 
-function AllySelector:ConstructStickynote(data)
-	local tOptions = {
-		bSelectOnMouseEnter = self.bSelectOnMouseEnter,
-		bSelectOnMouseButton = self.bSelectOnMouseButton
-	}
-	return Stickynote:New(data, tOptions, self.xmlDoc)
-end
+-- function AllySelector:ConstructStickynote(data)
+-- 	local tOptions = {
+-- 		bSelectOnMouseEnter = self.bSelectOnMouseEnter,
+-- 		bSelectOnMouseButton = self.bSelectOnMouseButton
+-- 	}
+-- 	return Stickynote:New(data, tOptions, self.xmlDoc)
+-- end
 
 -- function AllySelector:SetAlly(wndHandler, wndControl, eMouseButton)
 -- 	local unit = GameLib.GetPlayerUnit():GetTarget()

@@ -52,7 +52,7 @@ function Bookmark:New(luaHandler, nIndex, unit, nKeybind, bHasStickynote, o)
    end
 
    if bHasStickynote then
-      -- TODO: Construct sticknote.
+      o.stickynote = o:ConstructStickynote()
    end
 
    o:_PrintSysMsg("Bookmark node " .. tostring(o.wndMain:GetId()) .. " created.")
@@ -80,6 +80,32 @@ end
 --    end
 -- end
 
+-- Convert the meaningful data in this bookmark to a standard lua table.
+-- Used for Widlstar's addon save routine which only saves numbers, strings, and
+-- tables.
+function Bookmark:GetSerializedTable()
+
+   local function CheckStickynote()
+      if self.stickynote then return true
+      else return false end
+   end
+
+   if self.unit then
+      local data = {
+         strUnitName = self.wndMain:FindChild("Name"):GetText(),
+         nKeybind = self.nKeybind,
+         bHasStickynote = CheckStickynote()
+      }
+
+      -- Return the unit's name, keybind, and whether or not a stickynote exists.
+      return data
+
+   else
+      -- Return nothing if there is no unit in this bookmark.
+      return nil
+   end
+end
+
 function Bookmark:SetIndex(nIndex)
    self.nIndex = nIndex
    self.wndMain:FindChild("NumberSocket"):SetText(tostring(nIndex))
@@ -102,7 +128,6 @@ function Bookmark:SetUnitReference(unit)
             -- Remake stickynote for unit refernce if one exists for this bookmark.
             if self.stickynote then
                self.stickynote:Destroy()
-               -- TODO: Call stickynote constructor.
                self.stickynote = self:ConstructStickynote()
             end
 
@@ -183,7 +208,6 @@ function Bookmark:ClearKeybind()
    Apollo.RemoveEventHandler("SystemKeyDown", self)
 end
 
--- TODO: Re-optimize Stickynote class.
 function Bookmark:ConstructStickynote()
    local tOptions = {
       bSelectOnMouseEnter = self.luaHandler.bSelectOnMouseEnter,
@@ -220,11 +244,16 @@ end
 
 -- Event handler for sticknote button.
 function Bookmark:OnStickynoteButton()
+
    if self.unit then
-      if self.unit:IsValid() then
-         self.stickynote = self:ConstructStickynote()
+      if not self.stickynote then
+         if self.unit:IsValid() then
+            self.stickynote = self:ConstructStickynote()
+         else
+            self:_PrintSysMsg("Error: " .. self.wndMain:FindChild("Name"):GetText() .. " is too far out of range to make a stickynote.")
+         end
       else
-         self:_PrintSysMsg("Error: " .. self.unit:GetName() .. " is too far out of range to make a stickynote.")
+         self:_PrintSysMsg("Error: " .. self.unit:GetName() .. " in bookmark " .. tostring(self.nIndex) .. " already has a stickynote.")
       end
    else
       self:_PrintSysMsg("Error: There is nothing assigned to bookmark " .. tostring(self.nIndex) .. " to make a stickynote from.")

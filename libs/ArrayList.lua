@@ -36,7 +36,7 @@ function ArrayList:ConvertFromTable(t)
 	self._nLength = t.length
 end
 
-function ArrayList:ConvertToTable()
+function ArrayList:GetConvertedTable()
 	return {type = "ArrayList", list = self._tList, length = self._nLength}
 end
 
