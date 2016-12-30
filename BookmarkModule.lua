@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
--- Program: BookmarkModule 1.0.0
+-- Program: BookmarkModule 1.0.1
 -- Author: GhostRavenstorm
--- Date: 2016-12-25
+-- Date: 2016-12-29
 
 -- Description: Part of the AllySelector addon that contains class data for
 -- bookmark nodes.
@@ -59,26 +59,6 @@ function Bookmark:New(luaHandler, nIndex, unit, nKeybind, bHasStickynote, o)
 
    return o
 end
-
--- Moved to constructor.
--- function Bookmark:Init(nIndex, unit, nKeybind, bHasStickynote)
---    self.nIndex = nIndex
---    self.wndMain:FindChild("NumberSocket"):SetText(nIndex)
---
---    if unit then
---       self:SetUnitReference(unit)
---    end
---
---    if nKeybind then
---       self:SetKeybind(nKeybind)
---    else
---       self.wndMain:FindChild("KeybindBtn"):SetText("No Keybind")
---    end
---
---    if bHasStickynote then
---       -- TODO: Construct stickynote.
---    end
--- end
 
 -- Convert the meaningful data in this bookmark to a standard lua table.
 -- Used for Widlstar's addon save routine which only saves numbers, strings, and
@@ -144,7 +124,6 @@ function Bookmark:SetUnitReference(unit)
 end
 
 
--- TODO: Destroy stickynote.
 -- Clear the unit reference from this bookmark.
 function Bookmark:ClearUnitReference()
 
@@ -219,9 +198,6 @@ end
 function Bookmark:Destroy()
    self:ClearUnitReference()
 
-   -- if self.stickynote then self.stickynote:Destroy() end
-   -- self.stickynote = nil
-
    self:_PrintSysMsg("Bookmark node " .. tostring(self.wndMain:GetId()) .. " destroyed.")
 
    self.wndMain:Destroy()
@@ -278,6 +254,5 @@ end
 function Bookmark:_PrintSysMsg(strMsg)
    self.luaHandler.wndMain:FindChild("StatusMsg"):SetText(strMsg)
 end
-
 
 Apollo.RegisterPackage(Bookmark, MAJOR, MINOR, {})

@@ -1,7 +1,7 @@
 -----------------------------------
--- Program: ArrayList 1.0.3
+-- Program: ArrayList 1.0.4
 -- Author: GhostRavenstorm
--- Date: 2016-12-24
+-- Date: 2016-12-29
 
 -- Description: Simple collections class that stores values to a table in an
 -- ordered manner emulating an arraylist type of data sctructure.

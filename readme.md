@@ -1,4 +1,4 @@
-#### Program: AllySelector 1.7.2
+#### Program: AllySelector 1.7.3
 #### Author: GhostRavenstorm
 #### Date: 2016-12-23
 
@@ -30,7 +30,8 @@
 
 ### Remarks
    - Default keybind for smart selection is set to tab currently.
-   - Addon preferences and bookmarks do not persist after /reloadui.
+   - Empty bookmarks will not be saved between sessions.
+   - Stickynote selection will not work if both selection methods are enabled in the options window.
 
 
 ### Slash Commands
@@ -38,6 +39,11 @@
 
 
 ### Change Log
+
+#### 1.7.3
+   - Bookmarks save and restore between sessions if there is a unit assigned.
+   - Fixed health bars on stickynotes not updating.
+   - Code cleanup.
 
 #### 1.7.2
    - Prefs save and load back in between sessions and reload.
