@@ -1,7 +1,7 @@
 -----------------------------------
--- Program: ArrayList 1.0.2
+-- Program: ArrayList 1.0.4
 -- Author: GhostRavenstorm
--- Date: 2016-12-14
+-- Date: 2016-12-29
 
 -- Description: Simple collections class that stores values to a table in an
 -- ordered manner emulating an arraylist type of data sctructure.
@@ -13,6 +13,8 @@ local APkg = Apollo.GetPackage(MAJOR)
 if APkg and (APkg.nVersion or 0) >= MINOR then return end
 local ArrayList = APkg and APkg.tPackage or {}
 
+local DEBUG = false
+
 -- New array list instance.
 function ArrayList:New(o)
 	o = o or {}
@@ -22,12 +24,27 @@ function ArrayList:New(o)
 	o._tList = {}
 	o._nLength = 0
 
+	if o.type == "ArrayList" then
+		o:ConvertFromTable(o)
+	end
+
 	return o
+end
+
+function ArrayList:ConvertFromTable(t)
+	self._tList = t.list
+	self._nLength = t.length
+end
+
+function ArrayList:GetConvertedTable()
+	return {type = "ArrayList", list = self._tList, length = self._nLength}
 end
 
 function ArrayList:Print(index)
 
    index = index or 1
+
+	if self._nLength == 0 then Print("List is empty") end
 
    if index > self._nLength then
       return
@@ -37,17 +54,18 @@ function ArrayList:Print(index)
    end
 end
 
-function ArrayList:Add(item, index)
+function ArrayList:Add(object, index)
    -- Add non-duplicate to the end of the list.
 
-	index = index or 0
+	index = index or 1
 
-   if not self:_IsDuplicate(item) then
+   if not self:_IsDuplicate(object) then
    	if not self._tList[index] then
-   		self._tList[index] = item
+   		self._tList[index] = object
    		self._nLength = self._nLength + 1
+			if DEBUG then Print("[ArrayList:Add]: Adding " .. tostring(object) .. " to index: " .. tostring(index)) end
    	else
-   		return self:Add(item, index + 1)
+   		return self:Add(object, index + 1)
    	end
    end
 end
@@ -117,10 +135,13 @@ function ArrayList:Remove(item, index)
 
    if index > self._nLength then
       -- Nothing matching item was found.
+		if DEBUG then Print("[ArrayList:Remove]: Nothing matching " .. tostring(item) .. " found in list to remove.") end
       return
 
    elseif item == self._tList[index] then
 		-- Match for item is found here, remove it and consense list.
+
+		if DEBUG then Print("[ArrayList:Remove]: Removing " .. tostring(item) .. ".") end
 
 		self._tList[index] = nil
 		self:_Condense()
@@ -177,10 +198,12 @@ function ArrayList:Get(item, index)
 end
 
 function ArrayList:GetLast()
+	if DEBUG then Print("[ArrayList:GetLast]: Length: " .. tostring(self._nLength)) end
    if self._nLength ~= 0 then
+		if DEBUG then Print("[ArrayList:GetLast]: Last object: " .. tostring(self._tList[self._nLength])) end
       return self._tList[self._nLength]
    else
-      -- There is nothing in the list to get.
+      -- There is nothing in the list to get.]
       return
    end
 end
@@ -195,6 +218,21 @@ function ArrayList:GetFromIndex(index)
       return
    end
 end
+
+function ArrayList:GetIndexOfObject(object, index)
+	-- Returns the index of the first occurance of object.
+
+	index = index or 1
+
+	if index > self._nLength then
+		return "Object not found."
+	elseif object == self._tList[index] then
+		return index
+	else
+		return self:GetIndexOfObject(object, index + 1)
+	end
+end
+
 
 function ArrayList:GetLength()
    return self._nLength
