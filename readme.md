@@ -1,13 +1,11 @@
-#### Program: AllySelector 1.7.3
+#### Program: AllySelector 1.7.4
 #### Author: GhostRavenstorm
 #### Date: 2016-12-23
 
 ---
 
 ### Summary
-- Inspired by addons such as Healie, Heal Buddy, and Grid designed to replace Wildstar's
-  default tab-targeting macro for allies with smarter selection choices tailored specially
-  for healers.
+- Addon built for Wildstar designed to replace the default tab-targeting macro for allies with smarter selection choices tailored specially for healers.    Inspired by other addons such as Healie, Heal Buddy, and Grid.
 
 ### Features
 #### Smart Selection:
@@ -39,6 +37,9 @@
 
 
 ### Change Log
+
+#### 1.7.4
+   - Removed debug statements for stickynote update.
 
 #### 1.7.3
    - Bookmarks save and restore between sessions if there is a unit assigned.

@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- Program: AllySelector 1.7.3
+-- Program: AllySelector 1.7.4
 -- Author: GhostRavenstorm
 -- Date: 2016-12-29
 

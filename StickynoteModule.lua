@@ -13,7 +13,7 @@ local APkg = Apollo.GetPackage(MAJOR)
 if APkg and (APkg.nVersion or 0) >= MINOR then return end
 local Stickynote = APkg and APkg.tPackage or {}
 
-local DEBUG = true
+local DEBUG = false
 
 function Stickynote:New(luaHandler, tOptions, xmlDoc, o)
    o = o or {}
@@ -55,7 +55,6 @@ end
 function Stickynote:Update()
    local healthbar = self.wndMain:FindChild("Healthbar")
    if self.luaHandler.unit:IsValid() then
-      Print("Stickynote updating.")
       healthbar:SetProgress(self.luaHandler.unit:GetHealth())
    end
 end

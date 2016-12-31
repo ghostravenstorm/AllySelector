@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Addon Author="GhostRavenstorm" APIVersion="14" Name="AllySelector" Description="" Version="1.7.3">
+<Addon Author="GhostRavenstorm" APIVersion="14" Name="AllySelector" Description="" Version="1.7.4">
     <Script Name="libs\OmniCore.lua"/>
     <Script Name="libs\ArrayList.lua"/>
     <Script Name="libs\WildstarObjectArrayList.lua"/>
