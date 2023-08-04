@@ -7,6 +7,9 @@
 ### Summary
 - Addon built for Wildstar designed to replace the default tab-targeting macro for allies with smarter selection choices tailored specially for healers.    Inspired by other addons such as Healie, Heal Buddy, and Grid.
 
+### Official Doanload
+https://www.curseforge.com/wildstar/ws-addons/allyselector
+
 ### Features
 #### Smart Selection:
    - Allows for the user to quickly select the lowest health ally in range (35m).
